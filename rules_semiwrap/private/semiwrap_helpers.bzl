@@ -13,6 +13,12 @@ GEN_MODINIT_HDR_DIR = "generated/gen_modinit_hdr/"
 def _location_helper(filename):
     return " $(locations " + filename + ")"
 
+def _wrapper():
+    return "$(locations @rules_semiwrap//:wrapper) "
+
+def _wrapper_dep():
+    return ["@rules_semiwrap//:wrapper"]
+
 def publish_casters(
         name,
         project_config,
@@ -20,7 +26,7 @@ def publish_casters(
         output_json,
         output_pc,
         typecasters_srcs):
-    cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.publish_casters"
+    cmd = _wrapper() + " semiwrap.cmd.publish_casters"
     cmd += " $(SRCS) " + caster_name + " $(OUTS)"
 
     native.genrule(
@@ -28,7 +34,7 @@ def publish_casters(
         srcs = [project_config],
         outs = [PUBLISH_CASTERS_DIR + output_json, PUBLISH_CASTERS_DIR + output_pc],
         cmd = cmd,
-        tools = ["//bazel_scripts:wrapper"] + typecasters_srcs,
+        tools = _wrapper_dep() + typecasters_srcs,
         visibility = ["//visibility:public"],
     )
 
@@ -37,7 +43,7 @@ def resolve_casters(
         casters_pkl_file,
         caster_files,
         dep_file):
-    cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.resolve_casters "
+    cmd = _wrapper() + " semiwrap.cmd.resolve_casters "
     cmd += " $(OUTS)"
 
     cmd += _location_helper("@rules_semiwrap//:semiwrap_casters")
@@ -54,14 +60,14 @@ def resolve_casters(
         srcs = resolved_caster_files,
         outs = [RESOLVE_CASTERS_DIR + casters_pkl_file, RESOLVE_CASTERS_DIR + dep_file],
         cmd = cmd,
-        tools = ["//bazel_scripts:wrapper", "@rules_semiwrap//:semiwrap_casters"],
+        tools = _wrapper_dep() + ["@rules_semiwrap//:semiwrap_casters"],
     )
 
 def gen_libinit(
         name,
         output_file,
         modules):
-    cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.gen_libinit "
+    cmd = _wrapper() + " semiwrap.cmd.gen_libinit "
     cmd += " $(OUTS) "
     cmd += " ".join(modules)
 
@@ -69,7 +75,7 @@ def gen_libinit(
         name = name,
         outs = [output_file],
         cmd = cmd,
-        tools = ["//bazel_scripts:wrapper"],
+        tools = _wrapper_dep(),
     )
 
 def gen_pkgconf(
@@ -79,7 +85,7 @@ def gen_pkgconf(
         pkg_name,
         output_file,
         libinit_py):
-    cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.gen_pkgconf "
+    cmd = _wrapper() + " semiwrap.cmd.gen_pkgconf "
     cmd += " " + module_pkg_name + " " + pkg_name
     cmd += _location_helper(project_file)
     cmd += " $(OUTS)"
@@ -90,7 +96,7 @@ def gen_pkgconf(
         name = name,
         outs = [GEN_PKGCONF_DIR + output_file],
         cmd = cmd,
-        tools = ["//bazel_scripts:wrapper"] + [project_file],
+        tools = _wrapper_dep() + [project_file],
     )
 
 def header_to_dat(
@@ -103,7 +109,7 @@ def header_to_dat(
         deps = []):
     for class_name, yml_file, header_location in class_names:
         # print(class_name)
-        cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.header2dat "
+        cmd = _wrapper() + " semiwrap.cmd.header2dat "
         cmd += "--cpp 202002L "  # TODO
         cmd += class_name
         cmd += _location_helper(yml_file)
@@ -125,7 +131,7 @@ def header_to_dat(
             srcs = [RESOLVE_CASTERS_DIR + casters_pickle],
             outs = [HEADER_DAT_DIR + class_name + ".dat", HEADER_DAT_DIR + class_name + ".d"],
             cmd = cmd,
-            tools = ["//bazel_scripts:wrapper"] + [yml_file] + deps,
+            tools = _wrapper_dep() + [yml_file] + deps,
         )
 
 def dat_to_cc(
@@ -133,19 +139,19 @@ def dat_to_cc(
         class_names = []):
     for class_name in class_names:
         dat_file = HEADER_DAT_DIR + class_name + ".dat"
-        cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.dat2cpp "
+        cmd = _wrapper() + " semiwrap.cmd.dat2cpp "
         cmd += _location_helper(dat_file)
         cmd += " $(OUTS)"
         native.genrule(
             name = name + "." + class_name,
             outs = [DAT_TO_CC_DIR + class_name + ".cpp"],
             cmd = cmd,
-            tools = ["//bazel_scripts:wrapper"] + [dat_file],
+            tools = _wrapper_dep() + [dat_file],
         )
 
 def dat_to_tmpl_cpp(name, class_names):
     for base_class_name, specialization, tmp_class_name in class_names:
-        cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.dat2tmplcpp "
+        cmd = _wrapper() + " semiwrap.cmd.dat2tmplcpp "
         cmd += _location_helper(HEADER_DAT_DIR + base_class_name + ".dat")
         cmd += " " + specialization
         cmd += " $(OUTS)"
@@ -153,7 +159,7 @@ def dat_to_tmpl_cpp(name, class_names):
             name = name + "." + tmp_class_name,
             outs = [DAT_TO_TMPL_CC_DIR + tmp_class_name + ".cpp"],
             cmd = cmd,
-            tools = ["//bazel_scripts:wrapper"] + [HEADER_DAT_DIR + base_class_name + ".dat"],
+            tools = _wrapper_dep() + [HEADER_DAT_DIR + base_class_name + ".dat"],
         )
         break
 
@@ -162,19 +168,19 @@ def dat_to_tmpl_hpp(name, class_names):
         dat_file = HEADER_DAT_DIR + class_name + ".dat"
 
         # print(dat_file)
-        cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.dat2tmplhpp "
+        cmd = _wrapper() + " semiwrap.cmd.dat2tmplhpp "
         cmd += _location_helper(dat_file)
         cmd += " $(OUTS)"
         native.genrule(
             name = name + "." + class_name,
             outs = [DAT_TO_TMPL_HDR_DIR + class_name + "_tmpl.hpp"],
             cmd = cmd,
-            tools = ["//bazel_scripts:wrapper"] + [dat_file],
+            tools = _wrapper_dep() + [dat_file],
         )
 
 def dat_to_trampoline(name, class_names):
     for dat_file, class_name, output_file in class_names:
-        cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.dat2trampoline "
+        cmd = _wrapper() + " semiwrap.cmd.dat2trampoline "
 
         cmd += _location_helper(HEADER_DAT_DIR + dat_file)
         cmd += "  " + class_name
@@ -184,7 +190,7 @@ def dat_to_trampoline(name, class_names):
             name = name + "." + output_file,
             outs = [DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + output_file],
             cmd = cmd,
-            tools = ["//bazel_scripts:wrapper"] + [HEADER_DAT_DIR + dat_file],
+            tools = _wrapper_dep() + [HEADER_DAT_DIR + dat_file],
         )
 
 def gen_modinit_hpp(
@@ -194,7 +200,7 @@ def gen_modinit_hpp(
         output_file):
     input_dats = [HEADER_DAT_DIR + x + ".dat" for x in input_dats]
 
-    cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.gen_modinit_hpp "
+    cmd = _wrapper() + " semiwrap.cmd.gen_modinit_hpp "
     cmd += " " + libname
     cmd += " $(OUTS)"
     for input_dat in input_dats:
@@ -204,7 +210,7 @@ def gen_modinit_hpp(
         name = name + ".gen",
         outs = [GEN_MODINIT_HDR_DIR + output_file],
         cmd = cmd,
-        tools = ["//bazel_scripts:wrapper"] + input_dats,
+        tools = _wrapper_dep() + input_dats,
     )
     cc_library(
         name = name,
@@ -213,7 +219,7 @@ def gen_modinit_hpp(
     )
 
 def make_pyi(name):
-    cmd = "$(locations //bazel_scripts:wrapper) semiwrap.cmd.make_pyi "
+    cmd = _wrapper() + " semiwrap.cmd.make_pyi "
 
 def run_header_gen(name, include_root, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = []):
     temp_yml_files = []
