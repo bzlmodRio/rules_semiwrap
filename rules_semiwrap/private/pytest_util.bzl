@@ -1,4 +1,3 @@
-load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_python_pytest//python_pytest:defs.bzl", "py_pytest_test")
 
 def robotpy_py_test(name, tests, extra_sources = [], **kwargs):

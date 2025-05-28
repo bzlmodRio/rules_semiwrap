@@ -1,7 +1,5 @@
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
-load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library")
 load("@rules_python//python:defs.bzl", "py_library")
-load("@rules_python//python:packaging.bzl", "py_wheel")
 load("@rules_semiwrap//rules_semiwrap/private:wheel_helper.bzl", "wheel_helper")
 
 def create_pybind_library(

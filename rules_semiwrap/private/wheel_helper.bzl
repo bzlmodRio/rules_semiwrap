@@ -1,17 +1,14 @@
-
-load("@rules_python//python:packaging.bzl", "py_wheel")
 load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library")
+load("@rules_python//python:packaging.bzl", "py_wheel")
 
 def wheel_helper(
-    name,
-    package_name,
-    strip_path_prefixes,
-    robotpy_wheel_deps,
-    data,
-    version,
-    visibility,
-):
-
+        name,
+        package_name,
+        strip_path_prefixes,
+        robotpy_wheel_deps,
+        data,
+        version,
+        visibility):
     py_wheel(
         name = "{}-wheel".format(name),
         distribution = package_name,

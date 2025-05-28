@@ -3,6 +3,7 @@ module(
     version = "2025.0.0",
     compatibility_level = 2025,
 )
+
 bazel_dep(name = "rules_python", version = "1.0.0")
 bazel_dep(name = "pybind11_bazel", version = "2.13.6")
 bazel_dep(name = "rules_cc", version = "0.0.17")
