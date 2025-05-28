@@ -1,0 +1,12 @@
+
+alias(
+    name = "semiwrap_casters",
+    actual = "//rules_semiwrap/semiwrap_headers:semiwrap_casters",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "semiwrap_headers",
+    actual = "//rules_semiwrap/semiwrap_headers:semiwrap_headers",
+    visibility = ["//visibility:public"],
+)

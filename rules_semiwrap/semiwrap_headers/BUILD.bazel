@@ -1,0 +1,14 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "semiwrap_headers",
+    hdrs = glob(["*.h"]),
+    strip_include_prefix = ".",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "semiwrap_casters",
+    srcs = ["semiwrap.pybind11.json"],
+    visibility = ["//visibility:public"],
+)
