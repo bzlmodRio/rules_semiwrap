@@ -1,0 +1,41 @@
+From fe96867d766503404b0536e7e80af539856b33dc Mon Sep 17 00:00:00 2001
+From: PJ Reiniger <pj.reiniger@gmail.com>
+Date: Sun, 25 May 2025 03:26:59 -0400
+Subject: [PATCH] Patch to robotpy version
+
+---
+ internal_configure.bzl | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/internal_configure.bzl b/internal_configure.bzl
+index 7b6c0e9..2b33c25 100644
+--- a/internal_configure.bzl
++++ b/internal_configure.bzl
+@@ -18,12 +18,21 @@ def _internal_configure_extension_impl(module_ctx):
+     # The pybind11_bazel version should typically just be the pybind11 version,
+     # but can end with ".bzl.<N>" if the Bazel plumbing was updated separately.
+     version = version.split(".bzl.")[0]
++    # http_archive(
++    #     name = "pybind11",
++    #     build_file = "//:pybind11-BUILD.bazel",
++    #     strip_prefix = "pybind11-%s" % version,
++    #     url = "https://github.com/pybind/pybind11/archive/refs/tags/v%s.tar.gz" % version,
++    #     integrity = _INTEGRITIES.get(version),
++    # )
++    
+     http_archive(
+         name = "pybind11",
+         build_file = "//:pybind11-BUILD.bazel",
+-        strip_prefix = "pybind11-%s" % version,
+-        url = "https://github.com/pybind/pybind11/archive/refs/tags/v%s.tar.gz" % version,
+-        integrity = _INTEGRITIES.get(version),
++        strip_prefix = "pybind11-dfe7e65b4527eeb11036402aac3a394130960bb2",
++        urls = [
++            "https://github.com/pybind/pybind11/archive/dfe7e65b4527eeb11036402aac3a394130960bb2.zip",
++        ],
+     )
+ 
+ internal_configure_extension = module_extension(implementation = _internal_configure_extension_impl)
+-- 
+2.34.1
+

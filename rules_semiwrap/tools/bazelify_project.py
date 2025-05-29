@@ -1,9 +1,12 @@
 import argparse
 import pathlib
+import shutil
 
 
 def generate_files(project_dir: pathlib.Path):
     project_name = project_dir.name
+
+    shutil.copy("rules_semiwrap/tools/bazlify_project_files/0001-Patch-to-robotpy-version.patch", project_dir)
 
     with open(project_dir / "MODULE.bazel", 'w') as f:
         f.write(f"""bazel_dep(name = "rules_python", version = "1.0.0")
@@ -53,15 +56,17 @@ use_repo(pip, "{project_name.replace("-", "_")}_pip_deps")
 """)
 
     with open(project_dir / "BUILD.bazel", 'w') as f:
-        f.write("""load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+        f.write(f"""load("@{project_name.replace("-", "_")}_pip_deps//:requirements.bzl", "data_requirement")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "robotpy_library")
 
 # bazel run //:requirements.update / bazel test //:requirements_test
 compile_pip_requirements(
     name = "requirements",
     extra_args = ["--allow-unsafe"],
-    requirements_in = "pyproject.toml",
+    requirements_in = "requirements.txt",
     requirements_txt = "requirements_lock.txt",
-    requirements_windows = "requirements_windows.txt",
 )
 
 """)
@@ -82,7 +87,7 @@ common --registry=https://raw.githubusercontent.com/pjreiniger/bazel-central-reg
 
 common --enable_platform_specific_config
 
-build -c=opt
+build -c opt
 
 build:linux   --copt=-std=c++20
 build:macos   --copt=-std=c++20
@@ -97,17 +102,35 @@ build:windows --copt=/utf-8
         f.write("\n")
 
     with open(project_dir / "tests/BUILD.bazel", 'w') as f:
-        f.write("\n")
+        f.write("""load("@rules_semiwrap//:defs.bzl", "robotpy_py_test")
+
+robotpy_py_test(
+    "tests",
+    extra_sources = ["conftest.py"],
+    tests = glob(
+        ["**/*.py"],
+        exclude = [
+            "conftest.py",
+            "run_tests.py",
+        ],
+    ),
+    deps = [
+        "//:import",
+    ],
+)
+""")
 
     with open(project_dir / "requirements.txt", 'w') as f:
-        f.write("\n")
+        f.write("""wpilib~=2025.3.2.2
+pytest""")
 
     with open(project_dir / "requirements_lock.txt", 'w') as f:
         f.write("\n")
 
 def main():
 
-    project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev")
+    # project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev")
+    project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre")
 
     generate_files(project_dir)
 

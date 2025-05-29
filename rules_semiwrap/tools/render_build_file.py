@@ -619,7 +619,8 @@ def main():
         # pathlib.Path("/home/pjreiniger/git/robotpy/mostrobotpy/subprojects/robotpy-wpiutil/pyproject.toml"),
         # pathlib.Path("/home/pjreiniger/git/robotpy/mostrobotpy/subprojects/robotpy-wpiutil/tests/cpp/pyproject.toml"),
         # pathlib.Path("/home/pjreiniger/git/robotpy/mostrobotpy/subprojects/robotpy-xrp/pyproject.toml"),
-        pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev/pyproject.toml")
+        # pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev/pyproject.toml")
+        pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre/pyproject.toml")
     ]
 
     for project_file in project_files:
