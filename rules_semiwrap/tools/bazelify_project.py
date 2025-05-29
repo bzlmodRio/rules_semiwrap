@@ -72,7 +72,7 @@ compile_pip_requirements(
 """)
 
     with open(project_dir / ".bazelversion", 'w') as f:
-        f.write("7.3.1\n")
+        f.write("7.6.1\n")
         
     with open(project_dir / ".bazelrc", 'w') as f:
         f.write("""try-import %workspace%/.bazel_auth.rc
