@@ -73,6 +73,7 @@ def robotpy_library(
         strip_path_prefixes,
         version,
         data = [],
+        deps = [],
         robotpy_wheel_deps = [],
         visibility = None,
         **kwargs):
@@ -80,10 +81,11 @@ def robotpy_library(
         name = name,
         visibility = visibility,
         data = data,
+        deps = deps,
         **kwargs
     )
 
-    wheel_helper(name = name, visibility = visibility, data = data, package_name = package_name, strip_path_prefixes = strip_path_prefixes, robotpy_wheel_deps = robotpy_wheel_deps, version = version)
+    wheel_helper(name = name, visibility = visibility, data = data, package_name = package_name, strip_path_prefixes = strip_path_prefixes, deps = deps, robotpy_wheel_deps = robotpy_wheel_deps, version = version)
     # py_wheel(
     #     name = "{}-wheel".format(name),
     #     distribution = package_name,

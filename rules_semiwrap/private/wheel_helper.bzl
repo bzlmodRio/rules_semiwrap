@@ -8,7 +8,8 @@ def wheel_helper(
         robotpy_wheel_deps,
         data,
         version,
-        visibility):
+        visibility,
+        deps = []):
     py_wheel(
         name = "{}-wheel".format(name),
         distribution = package_name,
@@ -23,10 +24,23 @@ def wheel_helper(
         deps = data + [":{}".format(name)],
         strip_path_prefixes = strip_path_prefixes,
     )
+    
+    # pycross_wheel_library(
+    #     name = "import",
+    #     wheel = "{}-wheel".format(name),
+    #     deps = robotpy_wheel_deps,
+    #     visibility = visibility,
+    # )
 
-    pycross_wheel_library(
+    native.alias(
         name = "import",
-        wheel = "{}-wheel".format(name),
-        deps = robotpy_wheel_deps,
+        actual = ":{}".format(name),
         visibility = visibility,
     )
+
+    # pycross_wheel_library(
+    #     name = "import",
+    #     wheel = "{}-wheel".format(name),
+    #     deps = deps + robotpy_wheel_deps,
+    #     visibility = visibility,
+    # )

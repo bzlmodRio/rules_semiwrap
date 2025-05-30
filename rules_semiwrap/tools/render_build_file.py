@@ -423,8 +423,8 @@ DEFAULT_INCLUDE_ROOT = "external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_
 
     generated_info_buffer = RenderBuffer()
     generated_info_buffer.write_trim(
-        """load("//bazel_scripts:pybind_rules.bzl", "create_pybind_library")
-load("//bazel_scripts:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "publish_casters", "resolve_casters", "run_header_gen")
+        """load("@rules_semiwrap//:defs.bzl", "create_pybind_library")
+load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "resolve_casters", "run_header_gen")
 """
     )
 
@@ -620,7 +620,8 @@ def main():
         # pathlib.Path("/home/pjreiniger/git/robotpy/mostrobotpy/subprojects/robotpy-wpiutil/tests/cpp/pyproject.toml"),
         # pathlib.Path("/home/pjreiniger/git/robotpy/mostrobotpy/subprojects/robotpy-xrp/pyproject.toml"),
         # pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev/pyproject.toml")
-        pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre/pyproject.toml")
+        # pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre/pyproject.toml")
+        pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-navx/pyproject.toml")
     ]
 
     for project_file in project_files:

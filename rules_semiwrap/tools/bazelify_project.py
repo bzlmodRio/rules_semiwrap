@@ -130,7 +130,8 @@ pytest""")
 def main():
 
     # project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev")
-    project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre")
+    # project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre")
+    project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-navx")
 
     generate_files(project_dir)
 
