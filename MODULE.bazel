@@ -4,7 +4,7 @@ module(
     compatibility_level = 2025,
 )
 
-bazel_dep(name = "rules_python", version = "1.0.0")
+bazel_dep(name = "rules_python", version = "1.4.1")
 bazel_dep(name = "pybind11_bazel", version = "2.13.6")
 bazel_dep(name = "rules_cc", version = "0.0.17")
 bazel_dep(name = "aspect_bazel_lib", version = "2.16.0")
@@ -16,16 +16,57 @@ python = use_extension(
     "python",
     dev_dependency = True,
 )
+python.defaults(
+    # The environment variable takes precedence if set.
+    python_version = "3.13",
+    python_version_env = "BAZEL_PYTHON_VERSION",
+)
+
 python.toolchain(
     ignore_root_user_error = True,
-    is_default = True,
+    python_version = "3.9",
+)
+python.toolchain(
+    ignore_root_user_error = True,
     python_version = "3.10",
+)
+python.toolchain(
+    ignore_root_user_error = True,
+    python_version = "3.11",
+)
+python.toolchain(
+    ignore_root_user_error = True,
+    python_version = "3.12",
+)
+python.toolchain(
+    ignore_root_user_error = True,
+    python_version = "3.13",
 )
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "rules_semiwrap_pip_deps",
+    python_version = "3.9",
+    requirements_lock = "//requirement_locks/3.9:requirements_lock.txt",
+)
+pip.parse(
+    hub_name = "rules_semiwrap_pip_deps",
     python_version = "3.10",
-    requirements_lock = "//:requirements_lock.txt",
+    requirements_lock = "//requirement_locks/3.10:requirements_lock.txt",
+)
+pip.parse(
+    hub_name = "rules_semiwrap_pip_deps",
+    python_version = "3.11",
+    requirements_lock = "//requirement_locks/3.11:requirements_lock.txt",
+)
+pip.parse(
+    hub_name = "rules_semiwrap_pip_deps",
+    python_version = "3.12",
+    requirements_lock = "//requirement_locks/3.12:requirements_lock.txt",
+)
+pip.parse(
+    hub_name = "rules_semiwrap_pip_deps",
+    python_version = "3.13",
+    requirements_lock = "//requirement_locks/3.13:requirements_lock.txt",
 )
 use_repo(pip, "rules_semiwrap_pip_deps")
