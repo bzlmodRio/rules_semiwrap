@@ -8,8 +8,6 @@ import importlib
 def main():
     tool = sys.argv[1]
     args = sys.argv[2:]
-    # print(tool)
-    # print(args)
 
     module = importlib.import_module(tool)
     tool_main = getattr(module, "main")

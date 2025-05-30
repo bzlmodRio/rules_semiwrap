@@ -12,7 +12,12 @@ def create_native_library(
         module_dependencies,
         strip_pkg_prefix,
         version,
+        deps = [],
         visibility = ["//visibility:public"]):
+
+    if deps:
+        fail("Don't use deps directly")
+
     gen_libinit(
         name = "{}.gen_lib_init".format(name),
         lib_name = lib_name,
@@ -42,8 +47,8 @@ def create_native_library(
         name = "{}-wheel".format(package_name),
         distribution = package_name,
         platform = select({
-            "@bazel_tools//src/conditions:darwin": "win_amd64",
-            "@bazel_tools//src/conditions:windows": "macosx_11_0_x86_64",
+            "@bazel_tools//src/conditions:darwin": "macosx_11_0_x86_64",
+            "@bazel_tools//src/conditions:windows": "win_amd64",
             "//conditions:default": "manylinux_2_35_x86_64",
         }),
         python_tag = "py3",

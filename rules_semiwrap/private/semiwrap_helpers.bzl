@@ -244,6 +244,7 @@ def run_header_gen(name, include_root, casters_pickle, header_gen_config, deps =
     native.filegroup(
         name = name + ".yml_files",
         srcs = temp_yml_files,
+        tags = ["manual"],
     )
 
     generated_cc_files = []
@@ -292,9 +293,11 @@ def run_header_gen(name, include_root, casters_pickle, header_gen_config, deps =
     native.filegroup(
         name = name + ".generated_srcs",
         srcs = generated_cc_files,
+        tags = ["manual"],
     )
 
     native.filegroup(
         name = name + ".header_gen_files",
         srcs = tmpl_hdrs + trampoline_hdrs + generated_cc_files,
+        tags = ["manual"],
     )
