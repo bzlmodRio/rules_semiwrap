@@ -23,4 +23,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build again
-        run: bazel test //... -k --config=build_buddy
+        run: bazel test //... -k
