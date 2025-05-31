@@ -22,11 +22,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build allowing failure
-        run: bazel test //subprojects/robotpy-wpiutil/tests:test_struct --config=build_buddy || true
-
-      - name: Hack modify semiwrap
-        run: python3 -m bazel_scripts.debug.HACK_fix_pypi
-
       - name: Build again
         run: bazel test //... -k --config=build_buddy
