@@ -221,7 +221,7 @@ def gen_modinit_hpp(
 def make_pyi(name):
     cmd = _wrapper() + " semiwrap.cmd.make_pyi "
 
-def run_header_gen(name, include_root, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = []):
+def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = []):
     temp_yml_files = []
 
     for header_gen in header_gen_config:
@@ -230,7 +230,7 @@ def run_header_gen(name, include_root, casters_pickle, header_gen_config, deps =
         header_to_dat(
             name = name + ".header_to_dat",
             casters_pickle = casters_pickle,
-            include_root = include_root,
+            include_root = header_gen.header_root,
             class_names = [(
                 header_gen.class_name,
                 header_gen.yml_file,
