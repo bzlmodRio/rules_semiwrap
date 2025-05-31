@@ -1,4 +1,3 @@
-load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library")
 load("@rules_python//python:packaging.bzl", "py_wheel")
 
 def wheel_helper(
@@ -24,7 +23,7 @@ def wheel_helper(
         deps = data + [":{}".format(name)],
         strip_path_prefixes = strip_path_prefixes,
     )
-    
+
     # pycross_wheel_library(
     #     name = "import",
     #     wheel = "{}-wheel".format(name),

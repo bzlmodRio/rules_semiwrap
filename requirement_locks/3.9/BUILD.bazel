@@ -4,9 +4,9 @@ load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 compile_pip_requirements(
     name = "requirements",
     extra_args = ["--allow-unsafe"],
+    python_version = "3.9",
     requirements_in = "//:requirements.txt",
     requirements_txt = ":requirements_lock.txt",
-    # requirements_windows = ":requirements_windows.txt",
-    python_version = "3.9",
+    requirements_windows = ":requirements_windows.txt",
     tags = ["no-systemcore"],
 )

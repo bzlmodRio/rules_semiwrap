@@ -14,7 +14,6 @@ def create_native_library(
         version,
         deps = [],
         visibility = ["//visibility:public"]):
-
     if deps:
         fail("Don't use deps directly")
 

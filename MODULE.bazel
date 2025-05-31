@@ -21,7 +21,6 @@ python.defaults(
     python_version = "3.13",
     python_version_env = "BAZEL_PYTHON_VERSION",
 )
-
 python.toolchain(
     ignore_root_user_error = True,
     python_version = "3.9",
