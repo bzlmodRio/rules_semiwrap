@@ -18,10 +18,8 @@ def _wrapper():
 def _wrapper_dep():
     return ["@rules_semiwrap//:wrapper"]
 
-
 def _local_include_root(project_import, include_subpackage):
     return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
-
 
 def publish_casters(
         name,
@@ -54,6 +52,7 @@ def resolve_casters(
     cmd += _location_helper("@rules_semiwrap//:semiwrap_casters")
 
     resolved_caster_files = []
+
     # if "wpinet" in name:
     #     resolved_caster_files.append("//subprojects/robotpy-wpiutil:import")
     # print(resolved_caster_files)
@@ -65,11 +64,11 @@ def resolve_casters(
             cmd += " " + cfd
 
     #     print("-----", cfd)
-        # if not cfd.startswith("//"):
+    # if not cfd.startswith("//"):
     #     #     cfd = cfd
     #     # print()
     #     resolved_caster_files.append(cfd)
-    #     # if 
+    #     # if
 
     native.genrule(
         name = name,
@@ -131,6 +130,7 @@ def header_to_dat(
         cmd += "--cpp 202002L "  # TODO
         cmd += class_name
         cmd += _location_helper(yml_file)
+
         # cmd += _location_helper(header_to_dat_deps)
         cmd += " -I " + include_root
 
@@ -240,12 +240,11 @@ def gen_modinit_hpp(
 def make_pyi(name):
     cmd = _wrapper() + " semiwrap.cmd.make_pyi "
 
-def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps= [], local_native_libraries = []):
+def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps = [], local_native_libraries = []):
     temp_yml_files = []
 
     generation_includes = list(generation_includes)
     header_to_dat_deps = list(header_to_dat_deps)
-
 
     for project_label, include_subpackage in local_native_libraries:
         header_to_dat_deps.append(project_label)
@@ -253,7 +252,7 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
 
     # print(generation_includes)
     # print(header_to_dat_deps)
-    
+
     for header_gen in header_gen_config:
         temp_yml_files.append(header_gen.yml_file)
 

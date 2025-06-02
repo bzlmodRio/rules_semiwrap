@@ -1,9 +1,9 @@
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library")
 load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
 load("//rules_semiwrap/private:copy_native_file.bzl", "copy_native_file")
 load("//rules_semiwrap/private:hatch_nativelib_helpers.bzl", "gen_libinit")
-load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 
 def create_native_library(
         name,
@@ -27,7 +27,7 @@ def create_native_library(
         out = "native/{}/include".format(lib_name),
         root_paths = [""],
         exclude_srcs_patterns = ["**/BUILD.bazel", "WORKSPACE"],
-        verbose=False,
+        verbose = False,
     )
 
     gen_libinit(
@@ -41,7 +41,7 @@ def create_native_library(
         name = "{}.gen_pc".format(name),
         outs = ["native/{}/{}.pc".format(lib_name, package_name)],
         srcs = [":pyproject.toml"],
-        cmd = '$(locations @rules_semiwrap//rules_semiwrap/private:render_native_pc) --output_file=$(OUTS) --project_file=$(location :pyproject.toml)',
+        cmd = "$(locations @rules_semiwrap//rules_semiwrap/private:render_native_pc) --output_file=$(OUTS) --project_file=$(location :pyproject.toml)",
         tools = ["@rules_semiwrap//rules_semiwrap/private:render_native_pc"],
         visibility = ["//visibility:public"],
     )

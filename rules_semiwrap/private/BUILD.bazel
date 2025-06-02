@@ -17,6 +17,6 @@ py_binary(
 py_binary(
     name = "render_native_pc",
     srcs = ["render_native_pc.py"],
-    deps = [requirement("semiwrap")],
     visibility = ["//visibility:public"],
+    deps = [requirement("semiwrap")],
 )
