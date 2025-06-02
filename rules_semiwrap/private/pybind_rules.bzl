@@ -81,7 +81,6 @@ def robotpy_library(
     if deps:
         fail()
 
-    print(name)
     py_library(
         name = name,
         visibility = None,
@@ -90,10 +89,27 @@ def robotpy_library(
         **kwargs
     )
 
-    native.filegroup(
-        name = "ahhhhh",
-        srcs = [":{}/{}.pc".format(name, name)]
-    )
+    print(name  )
+    if name == "hal":
+        native.filegroup(
+            name = "ahhhhh",
+            srcs = [":hal/wpihal.pc".format(name)]
+        )
+    elif name == "wpimath":
+        native.filegroup(
+            name = "ahhhhh",
+            srcs = [
+                ":{}/{}.pc".format(name, name),
+                ":wpimath/filter/wpimath_filter.pc".format(name),
+                ":wpimath/geometry/wpimath_geometry.pc".format(name),
+                ":wpimath/spline/wpimath_spline.pc".format(name),
+            ]
+        )
+    else:
+        native.filegroup(
+            name = "ahhhhh",
+            srcs = [":{}/{}.pc".format(name, name)]
+        )
     
 
     # py_package(

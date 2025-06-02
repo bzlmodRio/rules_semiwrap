@@ -37,20 +37,12 @@ def create_native_library(
         output_file = "native/{}/_init_{}.py".format(lib_name, package_name.replace("-", "_")),
     )
 
-    contents = """
-pkgconf_pypi_initpy=native.wpiutil._init_robotpy_native_wpiutil
-
-Name: wpiutil
-Description: WPILib Utility Library
-Version: 2025.3.2
-"""
-
-    print(name)
-    # fail()
     native.genrule(
         name = "{}.gen_pc".format(name),
         outs = ["native/{}/{}.pc".format(lib_name, package_name)],
-        cmd = 'echo "' + contents + '" > $(OUTS)',
+        srcs = [":pyproject.toml"],
+        cmd = '$(locations @rules_semiwrap//rules_semiwrap/private:render_native_pc) --output_file=$(OUTS) --project_file=$(location :pyproject.toml)',
+        tools = ["@rules_semiwrap//rules_semiwrap/private:render_native_pc"],
         visibility = ["//visibility:public"],
     )
 

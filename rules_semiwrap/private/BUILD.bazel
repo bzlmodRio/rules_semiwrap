@@ -4,23 +4,19 @@ load("@rules_semiwrap_pip_deps//:requirements.bzl", "requirement")
 py_binary(
     name = "wrapper",
     srcs = ["wrapper.py"],
-    data = [
-        # data_requirement("semiwrap"),
-    ],
     visibility = ["//visibility:public"],
-    deps = [
-        requirement("semiwrap"),
-    ],
+    deps = [requirement("semiwrap")],
 )
 
 py_binary(
     name = "render_native_libinit",
     srcs = ["render_native_libinit.py"],
-    data = [
-        # data_requirement("semiwrap"),
-    ],
     visibility = ["//visibility:public"],
-    deps = [
-        # requirement("semiwrap"),
-    ],
+)
+
+py_binary(
+    name = "render_native_pc",
+    srcs = ["render_native_pc.py"],
+    deps = [requirement("semiwrap")],
+    visibility = ["//visibility:public"],
 )
