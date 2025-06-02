@@ -27,9 +27,8 @@ def create_native_library(
         out = "native/{}/include".format(lib_name),
         root_paths = [""],
         exclude_srcs_patterns = ["**/BUILD.bazel", "WORKSPACE"],
-        verbose=True,
+        verbose=False,
     )
-    print(headers)
 
     gen_libinit(
         name = "{}.gen_lib_init".format(name),
