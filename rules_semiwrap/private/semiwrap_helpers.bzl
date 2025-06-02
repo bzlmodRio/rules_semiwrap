@@ -105,6 +105,7 @@ def header_to_dat(
         include_root,
         class_names = [],
         generation_includes = [],
+        header_to_dat_deps = [],
         extra_defines = [],
         deps = []):
     for class_name, yml_file, header_location in class_names:
@@ -113,6 +114,7 @@ def header_to_dat(
         cmd += "--cpp 202002L "  # TODO
         cmd += class_name
         cmd += _location_helper(yml_file)
+        # cmd += _location_helper(header_to_dat_deps)
         cmd += " -I " + include_root
 
         # TODO TEMP
@@ -128,10 +130,10 @@ def header_to_dat(
         cmd += " bogus c++20 ccache c++ -- -std=c++20"  # TODO
         native.genrule(
             name = name + "." + class_name,
-            srcs = [RESOLVE_CASTERS_DIR + casters_pickle],
+            srcs = [RESOLVE_CASTERS_DIR + casters_pickle] + deps + header_to_dat_deps,
             outs = [HEADER_DAT_DIR + class_name + ".dat", HEADER_DAT_DIR + class_name + ".d"],
             cmd = cmd,
-            tools = _wrapper_dep() + [yml_file] + deps,
+            tools = _wrapper_dep() + [yml_file],
         )
 
 def dat_to_cc(
@@ -221,7 +223,7 @@ def gen_modinit_hpp(
 def make_pyi(name):
     cmd = _wrapper() + " semiwrap.cmd.make_pyi "
 
-def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = []):
+def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps= []):
     temp_yml_files = []
 
     for header_gen in header_gen_config:
@@ -239,6 +241,7 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
             deps = deps,
             generation_includes = generation_includes,
             extra_defines = generation_defines,
+            header_to_dat_deps = header_to_dat_deps,
         )
 
     native.filegroup(

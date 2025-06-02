@@ -1,0 +1,8 @@
+load("@rules_semiwrap_pip_deps//:requirements.bzl", "requirement")
+
+py_binary(
+    name = "generate_build_file",
+    srcs = ["generate_build_file.py"],
+    visibility = ["//visibility:public"],
+    deps = [requirement("semiwrap")],
+)

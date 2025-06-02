@@ -18,7 +18,9 @@ def main():
     except:
         print("-------------------------------------")
         print("Failed to run wrapped tool.")
-        print(f"Tool: {tool}, Args: {args}")
+        print(f"Tool: {tool}, Args:")
+        for a in args:
+            print("  ", a)
         print("-------------------------------------")
         raise
 

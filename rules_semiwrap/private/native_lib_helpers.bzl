@@ -3,10 +3,13 @@ load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
 load("//rules_semiwrap/private:copy_native_file.bzl", "copy_native_file")
 load("//rules_semiwrap/private:hatch_nativelib_helpers.bzl", "gen_libinit")
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 
 def create_native_library(
         name,
         lib_name,
+        headers,
+        headers_external_repositories,
         package_name,
         shared_library,
         module_dependencies,
@@ -16,6 +19,17 @@ def create_native_library(
         visibility = ["//visibility:public"]):
     if deps:
         fail("Don't use deps directly")
+
+    copy_to_directory(
+        name = "{}.copy_headers".format(name),
+        srcs = [headers],
+        include_external_repositories = headers_external_repositories,
+        out = "native/{}/include".format(lib_name),
+        root_paths = [""],
+        exclude_srcs_patterns = ["**/BUILD.bazel", "WORKSPACE"],
+        verbose=True,
+    )
+    print(headers)
 
     gen_libinit(
         name = "{}.gen_lib_init".format(name),
@@ -32,7 +46,7 @@ def create_native_library(
     py_library(
         name = package_name,
         srcs = ["{}.gen_lib_init".format(name)],
-        data = [":{}.copy_lib".format(lib_name)],
+        data = [":{}.copy_lib".format(lib_name), "{}.copy_headers".format(name)],
         imports = ["."],
         visibility = visibility,
     )
