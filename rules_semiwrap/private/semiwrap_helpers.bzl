@@ -2,7 +2,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 PUBLISH_CASTERS_DIR = "generated/publish_casters/"
 RESOLVE_CASTERS_DIR = "generated/resolve_casters/"
-GEN_PKGCONF_DIR = "generated/gen_pkgconf/"
 HEADER_DAT_DIR = "generated/header_to_dat/"
 DAT_TO_CC_DIR = "generated/dat_to_cc/"
 DAT_TO_TMPL_CC_DIR = "generated/dat_to_tmpl_cc/"
@@ -92,9 +91,11 @@ def gen_pkgconf(
     if libinit_py:
         cmd += " --libinit-py " + libinit_py
 
+    print(name, "     ", module_pkg_name, pkg_name)
+    print(name == "wpiutil")
     native.genrule(
         name = name,
-        outs = [GEN_PKGCONF_DIR + output_file],
+        outs = [pkg_name + "/" + output_file],
         cmd = cmd,
         tools = _wrapper_dep() + [project_file],
     )

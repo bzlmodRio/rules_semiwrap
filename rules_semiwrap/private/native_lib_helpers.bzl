@@ -37,6 +37,23 @@ def create_native_library(
         output_file = "native/{}/_init_{}.py".format(lib_name, package_name.replace("-", "_")),
     )
 
+    contents = """
+pkgconf_pypi_initpy=native.wpiutil._init_robotpy_native_wpiutil
+
+Name: wpiutil
+Description: WPILib Utility Library
+Version: 2025.3.2
+"""
+
+    print(name)
+    # fail()
+    native.genrule(
+        name = "{}.gen_pc".format(name),
+        outs = ["native/{}/{}.pc".format(lib_name, package_name)],
+        cmd = 'echo "' + contents + '" > $(OUTS)',
+        visibility = ["//visibility:public"],
+    )
+
     copy_native_file(
         name = lib_name,
         base_path = "native/{}/".format(lib_name),
@@ -45,7 +62,7 @@ def create_native_library(
     py_library(
         name = package_name,
         srcs = ["{}.gen_lib_init".format(name)],
-        data = [":{}.copy_lib".format(lib_name), "{}.copy_headers".format(name)],
+        data = [":{}.copy_lib".format(lib_name), "{}.copy_headers".format(name), "{}.gen_pc".format(name)],
         imports = ["."],
         visibility = visibility,
     )

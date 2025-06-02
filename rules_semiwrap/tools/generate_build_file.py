@@ -56,11 +56,40 @@ def resolve_dependency(dependencies, root_package):
     return resolved, header_paths_str
 
 
+import os
+def hack_pkgconfig(depends, pkgcfgs):
+    # print(depends)
+    # print("\n".join(f"{key} {value}" for key, value in os.environ.items()))
+    print("))))))))))))))))))))))))))")
+    print(pkgcfgs)
+    
+    pkg_config_paths = os.environ.get('PKG_CONFIG_PATH', '').split(os.pathsep)
+
+    for pc in pkgcfgs:
+        print(pc.parent)
+        print(pc.parent.exists())
+        print(pc.parent.absolute())
+        print(os.path.exists(pc.parent))
+        pkg_config_paths.append(str(pc.parent))
+    
+    print(pkg_config_paths)
+        
+    os.environ["PKG_CONFIG_PATH"] = os.pathsep.join(pkg_config_paths)
+    # raise
+    # for d in depends:
+    #     if "casters" in d:
+    #         continue
+    #     else:
+    #         raise Exception(d)
+    # pass
+
+
 class Generator:
-    def __init__(self, project_file):
+    def __init__(self, project_file, pkgcfgs: T.List[pathlib.Path]):
         self.output_buffer = RenderBuffer()
         self.project_root = project_file.parent
         self.pyproject = PyProject(project_file)
+        self.pkgcfgs = pkgcfgs
         
         self.local_caster_targets: T.Dict[str, BuildTargetOutput] = {}
         
@@ -153,6 +182,8 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
         # Add semiwrap default type casters
         # caster_json_file.append(self.semiwrap_type_caster_path)
 
+        hack_pkgconfig(depends, self.pkgcfgs)
+
         for dep in depends:
             entry = self.pkgcache.get(dep)
             include_directories_uniq.update(
@@ -190,6 +221,7 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
                 tc = entry.type_casters_path
                 if tc and tc not in caster_json_file:
                     print("--ff--", tc)
+                    print(os.environ)
                     tc = str(tc).replace(
                         "/home/pjreiniger/git/robotpy/robotpy_monorepo/rules_semiwrap/.venv/lib/python3.10/site-packages/wpiutil/wpiutil-casters.pybind11.json", 
                         "//subprojects/robotpy-wpiutil:generated/publish_casters/wpiutil-casters.pybind11.json")
@@ -290,6 +322,17 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
 
     def _write_extension_data(self, package_name: str, extension: ExtensionModuleConfig, extra_generation_hdrs):
         depends = self.pyproject.get_extension_deps(extension)
+        ignored_depends = []
+        for d in depends:
+            if "casters" in d:
+                ignored_depends.append(d)
+
+        for id in ignored_depends:
+            depends.remove(id)
+
+        print("11111111111111")
+        print(depends)
+        
 
         extra_generation_hdrs_str = ""
         if extra_generation_hdrs:
@@ -444,8 +487,8 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
         with open(output_file, 'w') as f:
             f.write(self.output_buffer.getvalue())
 
-def generate_build_info(project_file: pathlib.Path, output_file: pathlib.Path):
-    generator = Generator(project_file)
+def generate_build_info(project_file: pathlib.Path, output_file: pathlib.Path, pkgcfgs: T.List[pathlib.Path]):
+    generator = Generator(project_file, pkgcfgs)
     generator.generate(output_file)
     
 
@@ -455,6 +498,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--project_file", type=pathlib.Path, required=True)
     parser.add_argument("--output_file", type=pathlib.Path, required=True)
+    parser.add_argument("--pkgcfgs", type=pathlib.Path, nargs="+")
     # parser.add_argument("ip", type=str, help="IP address to connect to")
     args = parser.parse_args()
     print(args)
@@ -479,7 +523,7 @@ def main():
 
     # for project_file in project_files:
     #     print(f"Running for {project_file}")
-    generate_build_info(args.project_file, args.output_file)
+    generate_build_info(args.project_file, args.output_file, args.pkgcfgs)
 
 
 

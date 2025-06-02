@@ -1,7 +1,7 @@
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
 load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library")
 load("@rules_python//python:defs.bzl", "py_library")
-load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:packaging.bzl", "py_wheel", "py_package")
 
 def create_pybind_library(
         name,
@@ -81,6 +81,7 @@ def robotpy_library(
     if deps:
         fail()
 
+    print(name)
     py_library(
         name = name,
         visibility = None,
@@ -88,6 +89,19 @@ def robotpy_library(
         deps = robotpy_wheel_deps,
         **kwargs
     )
+
+    native.filegroup(
+        name = "ahhhhh",
+        srcs = [":{}/{}.pc".format(name, name)]
+    )
+    
+
+    # py_package(
+    #     name = "ahhhhhhh",
+    #     # Only include these Python packages.
+    #     # packages = ["examples.wheel"],
+    #     deps = [":{}/{}.pc".format(name, name)],
+    # )
 
     py_wheel(
         name = "{}-wheel".format(name),
@@ -100,7 +114,8 @@ def robotpy_library(
         python_tag = "py3",
         stamp = 1,
         version = version,
-        deps = data + [":{}".format(name)],
+        deps = data + [":{}".format(name), ] + [":ahhhhh"],
+        # data = ,
         strip_path_prefixes = strip_path_prefixes,
     )
 
