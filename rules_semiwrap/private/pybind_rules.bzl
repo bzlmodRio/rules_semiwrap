@@ -89,35 +89,27 @@ def robotpy_library(
         **kwargs
     )
 
-    print(name  )
-    if name == "hal":
-        native.filegroup(
-            name = "ahhhhh",
-            srcs = [":hal/wpihal.pc".format(name)]
-        )
-    elif name == "wpimath":
-        native.filegroup(
-            name = "ahhhhh",
-            srcs = [
-                ":{}/{}.pc".format(name, name),
-                ":wpimath/filter/wpimath_filter.pc".format(name),
-                ":wpimath/geometry/wpimath_geometry.pc".format(name),
-                ":wpimath/spline/wpimath_spline.pc".format(name),
-            ]
-        )
-    else:
-        native.filegroup(
-            name = "ahhhhh",
-            srcs = [":{}/{}.pc".format(name, name)]
-        )
-    
-
-    # py_package(
-    #     name = "ahhhhhhh",
-    #     # Only include these Python packages.
-    #     # packages = ["examples.wheel"],
-    #     deps = [":{}/{}.pc".format(name, name)],
-    # )
+    # print(name  )
+    # if name == "hal":
+    #     native.filegroup(
+    #         name = "ahhhhh",
+    #         srcs = [":hal/wpihal.pc".format(name)]
+    #     )
+    # elif name == "wpimath":
+    #     native.filegroup(
+    #         name = "ahhhhh",
+    #         srcs = [
+    #             ":{}/{}.pc".format(name, name),
+    #             ":wpimath/filter/wpimath_filter.pc".format(name),
+    #             ":wpimath/geometry/wpimath_geometry.pc".format(name),
+    #             ":wpimath/spline/wpimath_spline.pc".format(name),
+    #         ]
+    #     )
+    # else:
+    #     native.filegroup(
+    #         name = "ahhhhh",
+    #         srcs = [":{}/{}.pc".format(name, name)]
+    #     )
 
     py_wheel(
         name = "{}-wheel".format(name),
@@ -130,7 +122,7 @@ def robotpy_library(
         python_tag = "py3",
         stamp = 1,
         version = version,
-        deps = data + [":{}".format(name), ] + [":ahhhhh"],
+        deps = data + [":{}".format(name)],
         # data = ,
         strip_path_prefixes = strip_path_prefixes,
     )

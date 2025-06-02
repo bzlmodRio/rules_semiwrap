@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-PUBLISH_CASTERS_DIR = "generated/publish_casters/"
+# PUBLISH_CASTERS_DIR = "generated/publish_casters/"
 RESOLVE_CASTERS_DIR = "generated/resolve_casters/"
 HEADER_DAT_DIR = "generated/header_to_dat/"
 DAT_TO_CC_DIR = "generated/dat_to_cc/"
@@ -36,7 +36,7 @@ def publish_casters(
     native.genrule(
         name = name,
         srcs = [project_config],
-        outs = [PUBLISH_CASTERS_DIR + output_json, PUBLISH_CASTERS_DIR + output_pc],
+        outs = [output_json, output_pc],
         cmd = cmd,
         tools = _wrapper_dep() + typecasters_srcs,
         visibility = ["//visibility:public"],
@@ -46,22 +46,34 @@ def resolve_casters(
         name,
         casters_pkl_file,
         caster_files,
-        dep_file):
+        dep_file,
+        caster_deps = []):
     cmd = _wrapper() + " semiwrap.cmd.resolve_casters "
     cmd += " $(OUTS)"
 
     cmd += _location_helper("@rules_semiwrap//:semiwrap_casters")
 
     resolved_caster_files = []
+    # if "wpinet" in name:
+    #     resolved_caster_files.append("//subprojects/robotpy-wpiutil:import")
+    # print(resolved_caster_files)
     for cfd in caster_files:
-        if not cfd.startswith("//"):
-            cfd = PUBLISH_CASTERS_DIR + cfd
-        resolved_caster_files.append(cfd)
-        cmd += _location_helper(cfd)
+        if cfd.startswith(":"):
+            resolved_caster_files.append(cfd)
+            cmd += _location_helper(cfd)
+        else:
+            cmd += " " + cfd
+
+    #     print("-----", cfd)
+        # if not cfd.startswith("//"):
+    #     #     cfd = cfd
+    #     # print()
+    #     resolved_caster_files.append(cfd)
+    #     # if 
 
     native.genrule(
         name = name,
-        srcs = resolved_caster_files,
+        srcs = resolved_caster_files + caster_deps,
         outs = [RESOLVE_CASTERS_DIR + casters_pkl_file, RESOLVE_CASTERS_DIR + dep_file],
         cmd = cmd,
         tools = _wrapper_dep() + ["@rules_semiwrap//:semiwrap_casters"],
@@ -97,7 +109,6 @@ def gen_pkgconf(
         cmd += " --libinit-py " + libinit_py
 
     OUT_FILE = pkg_name.replace("_", "/") + "/" + output_file
-    print(OUT_FILE)
     native.genrule(
         name = name,
         outs = [OUT_FILE],

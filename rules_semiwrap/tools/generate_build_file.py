@@ -33,7 +33,7 @@ def resolve_dependency(dependencies, root_package):
             bazel_dep = f"//subprojects/{d}"
             base_lib = re.search("robotpy-native-(.*)", d)[1]
             # logging.error(base_lib)
-            header_paths.add(f"$(location //subprojects/robotpy-native-{root_package}:import)/site-packages/native/{root_package}/include")
+            header_paths.add(f'_local_include_root("//subprojects/robotpy-native-{root_package}:import", "{root_package}")')
         elif "casters" in d:
             continue
         else:
@@ -48,7 +48,7 @@ def resolve_dependency(dependencies, root_package):
 
     if header_paths:
         header_paths_str = "[\n            "
-        header_paths_str += ",\n            ".join(f'"{x}"' for x in sorted(header_paths))
+        header_paths_str += ",\n            ".join(f'{x}' for x in sorted(header_paths))
         header_paths_str += ",\n        ]"
     else:
         header_paths = "[]"
@@ -97,6 +97,10 @@ class Generator:
 
         self.output_buffer.write_trim("""load("@rules_semiwrap//:defs.bzl", "create_pybind_library")
 load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "publish_casters", "resolve_casters", "run_header_gen")
+load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "make_pyi", "robotpy_library")
+
+def _local_include_root(project_import, include_subpackage):
+    return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
 """)    
         self.output_buffer.writeln()
 
@@ -333,21 +337,28 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
                         cls_ns = cls_ns.replace(":", "_")
 
                     h_input, h_root = self._locate_header(hdr, search_path)
-                    if str(h_root).startswith("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy"):
-                        header_root = f"$(location //subprojects/robotpy-native-{root_package}:import)/site-packages/native/{root_package}/include"
-                        # header_root = str(h_root)[len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy/"):]
+                    if "site-packages" in str(h_root):
+                        header_root = f'_local_include_root("//subprojects/robotpy-native-{root_package}:import", "{root_package}")'
+                    # if str(h_root).startswith("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy"):
+                    #     header_root = f"$(location //subprojects/robotpy-native-{root_package}:import)/site-packages/native/{root_package}/include"
+                    #     # header_root = str(h_root)[len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy/"):]
                     elif str(h_root).startswith("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy"):
-                        header_root = str(h_root)[len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/"):]
+                        header_root = '"' + str(h_root)[len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/"):] +  '"'
                         extra_hdrs.append(package_name.split(".")[0] / h_input.relative_to(h_root))
                     else:
                         header_root = h_input
+
+                    print(header_root)
+                    print(h_input)
+                    print(h_root)
+                    header_suffix = h_input.relative_to(h_root)
 
                     self.output_buffer.write_trim(f"""
                     struct(
                         class_name = "{yml}",
                         yml_file = "{yml_input}",
-                        header_root = "{header_root}",
-                        header_file = "{header_root}/{h_input.relative_to(h_root)}",
+                        header_root = {header_root},
+                        header_file = {header_root} + "/{h_input.relative_to(h_root)}",
                         tmpl_class_names = {tmpl_class_names},
                         trampolines = {trampolines},
                     ),""")
@@ -387,7 +398,8 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
 
         libinit_modules = "[" + ", ".join(f'"{x}"' for x in libinit_modules) + "]"
         caster_json_file = "[" + ", ".join(f'"{x}"' for x in sorted(set(caster_json_file))) + "]"
-        # print(caster_json_file)
+        print(caster_json_file)
+        # raise
 
         with self.output_buffer.indent(4):
             package_path_elems = package_name.split(".")
@@ -500,6 +512,14 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
             extra_generation_hdrs = self._process_headers(package_name, extension, yaml_path)
             self._write_extension_data(package_name, extension, extra_generation_hdrs)
 
+            varname = extension.name or package_name.replace(".", "_")
+            self.pkgcache.add_local(
+                name=varname,
+                includes=[],
+                requires=[],
+                # libinit_py=libinit_module,
+            )
+
         
         for name, caster_cfg in self.pyproject.project.export_type_casters.items():            
             self.output_buffer.writeln()
@@ -514,6 +534,35 @@ load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libini
                     typecasters_srcs = typecasters_srcs,
                 )
             """)
+
+        self.output_buffer.write_trim(f"""
+        def move_extension_modules():
+        """)
+        all_extension_names = []
+        for package_name, extension in self.pyproject.project.extension_modules.items():
+            if extension.ignore:
+                continue
+
+            with self.output_buffer.indent(4):
+                self.output_buffer.write_trim(f"""
+                copy_extension_library(
+                    name = "copy_{extension.name}",
+                    extension = "_wpiutil",
+                    output_directory = "wpiutil/",
+                )
+                """)
+
+            all_extension_names.append(extension.name)
+
+        copy_extension_text = "[\n        " + "\n        ".join(f'":copy_{x}",' for x in all_extension_names) + "\n    ]"
+        self.output_buffer.writeln(f"    return {copy_extension_text}")
+
+        libinit_files_text = "[\n        " + "\n            ".join(f'"{x}/_init__{x}.py",' for x in all_extension_names) + "\n    ]"
+        print(libinit_files_text)
+        self.output_buffer.writeln(f"""def libinit_files():\n    return {libinit_files_text}""")
+        
+
+            
 
         
         with open(output_file, 'w') as f:
@@ -555,6 +604,11 @@ def main():
 
     # for project_file in project_files:
     #     print(f"Running for {project_file}")
+
+    for pc in args.pkgcfgs:
+        if not os.path.exists(pc):
+            raise Exception(f"Package config {pc} does not exist")
+
     generate_build_info(args.project_file, args.output_file, args.pkgcfgs)
 
 
