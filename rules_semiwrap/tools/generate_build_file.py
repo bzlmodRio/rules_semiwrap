@@ -288,24 +288,24 @@ def _local_include_root(project_import, include_subpackage):
         if extension.name == "wpiutil":
             search_path.append(
                 pathlib.Path(
-                    "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/subprojects/robotpy-wpiutil/wpiutil/"
+                    "subprojects/robotpy-wpiutil/wpiutil/"
                 )
             )
         elif "wpilib" in extension.name:
             search_path.append(
                 pathlib.Path(
-                    "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/subprojects/robotpy-wpilib/wpilib/src"
+                    "subprojects/robotpy-wpilib/wpilib/src"
                 )
             )
         elif "cscore" in extension.name:
             search_path.append(
                 pathlib.Path(
-                    "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy/external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cscore_cscore-cpp_headers"
+                    "bazel-mostrobotpy/external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cscore_cscore-cpp_headers"
                 )
             )
             search_path.append(
                 pathlib.Path(
-                    "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy/external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cameraserver_cameraserver-cpp_headers"
+                    "bazel-mostrobotpy/external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cameraserver_cameraserver-cpp_headers"
                 )
             )
 
