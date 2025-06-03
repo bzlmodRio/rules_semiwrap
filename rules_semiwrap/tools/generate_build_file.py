@@ -286,17 +286,9 @@ def _local_include_root(project_import, include_subpackage):
         )
 
         if extension.name == "wpiutil":
-            search_path.append(
-                pathlib.Path(
-                    "subprojects/robotpy-wpiutil/wpiutil/"
-                )
-            )
+            search_path.append(pathlib.Path("subprojects/robotpy-wpiutil/wpiutil/"))
         elif "wpilib" in extension.name:
-            search_path.append(
-                pathlib.Path(
-                    "subprojects/robotpy-wpilib/wpilib/src"
-                )
-            )
+            search_path.append(pathlib.Path("subprojects/robotpy-wpilib/wpilib/src"))
         elif "cscore" in extension.name:
             search_path.append(
                 pathlib.Path(
