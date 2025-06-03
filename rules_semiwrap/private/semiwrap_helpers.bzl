@@ -53,22 +53,12 @@ def resolve_casters(
 
     resolved_caster_files = []
 
-    # if "wpinet" in name:
-    #     resolved_caster_files.append("//subprojects/robotpy-wpiutil:import")
-    # print(resolved_caster_files)
     for cfd in caster_files:
         if cfd.startswith(":"):
             resolved_caster_files.append(cfd)
             cmd += _location_helper(cfd)
         else:
             cmd += " " + cfd
-
-    #     print("-----", cfd)
-    # if not cfd.startswith("//"):
-    #     #     cfd = cfd
-    #     # print()
-    #     resolved_caster_files.append(cfd)
-    #     # if
 
     native.genrule(
         name = name,
