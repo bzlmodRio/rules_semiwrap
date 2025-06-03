@@ -25,13 +25,40 @@ def main():
         "pcfile"
     ][0]["name"]
 
+    # TODO all hacked up
+    lib_name = project_name
+    if project_name == "wpihal":
+        lib_name = "wpiHal"
+    if project_name == "wpilib":
+        lib_name = "wpilibc"
+    if project_name == "romi":
+        lib_name = "romiVendordep"
+    if project_name == "xrp":
+        lib_name = "xrpVendordep"
+
     pkgconf_pypi_initpy = f"native.{project_name}._init_robotpy_native_{project_name}"
 
     requires = []
-    if project_name in ["ntcore"]:
-        requires.append("robotpy-native-wpinet")
-    if project_name in ["ntcore", "wpinet", "wpimath"]:
+    if project_name == "wpilib":
         requires.append("robotpy-native-wpiutil")
+        requires.append("robotpy-native-wpinet")
+        requires.append("robotpy-native-ntcore")
+        requires.append("robotpy-native-wpimath")
+        requires.append("robotpy-native-wpihal")
+    elif project_name == "romi":
+        requires.append("robotpy-native-wpilib")
+    elif project_name == "xrp":
+        requires.append("robotpy-native-wpilib")
+    elif project_name == "apriltag":
+        requires.append("robotpy-native-wpiutil")
+        requires.append("robotpy-native-wpimath")
+    else:
+        if project_name in ["wpilib"]:
+            requires.append("robotpy-native-wpihal")
+        if project_name in ["ntcore", "wpilib"]:
+            requires.append("robotpy-native-wpinet")
+        if project_name in ["ntcore", "wpinet", "wpimath", "wpihal", "wpilib"]:
+            requires.append("robotpy-native-wpiutil")
 
     with open(args.output_file, "w") as f:
         f.write(
@@ -52,7 +79,7 @@ Version: {project_cfg["project"]["version"]}"""
         f.write(
             """
 Libs: -L${libdir} """
-            + f"-l{project_name}"
+            + f"-l{lib_name}"
             + """
 Cflags: -I${includedir}
 """

@@ -2,6 +2,7 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
 load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library")
 load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_python//python:packaging.bzl", "py_wheel")
+# load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 
 def create_pybind_library(
         name,
@@ -110,6 +111,16 @@ def robotpy_library(
     #         name = "ahhhhh",
     #         srcs = [":{}/{}.pc".format(name, name)]
     #     )
+    
+    # copy_to_directory(
+    #     name = "{}.copy_headers".format(name),
+    #     srcs = [":wpiutil.trampoline_hdr_files"],
+    #     # include_external_repositories = headers_external_repositories,
+    #     out = "wpiutil/trampolines",
+    #     root_paths = ["subprojects/robotpy-wpiutil/generated/dat_to_trampoline_hdr/trampolines"],
+    #     exclude_srcs_patterns = ["**/BUILD.bazel", "WORKSPACE"],
+    #     verbose = True,
+    # )
 
     py_wheel(
         name = "{}-wheel".format(name),
@@ -119,10 +130,12 @@ def robotpy_library(
             "@bazel_tools//src/conditions:windows": "win_amd64",
             "//conditions:default": "manylinux_2_35_x86_64",
         }),
-        python_tag = "py3",
+        python_tag = "cp311",
+        abi = "cp311",
         stamp = 1,
         version = version,
         deps = data + [":{}".format(name)],
+        # deps = data + [":{}".format(name)] + ["{}.copy_headers".format(name)],
         # data = ,
         strip_path_prefixes = strip_path_prefixes,
     )

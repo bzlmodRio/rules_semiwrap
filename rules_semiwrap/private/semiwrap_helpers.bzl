@@ -321,6 +321,12 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
     )
 
     native.filegroup(
+        name = name + ".trampoline_hdr_files",
+        srcs = trampoline_hdrs,
+        tags = ["manual"],
+    )
+
+    native.filegroup(
         name = name + ".header_gen_files",
         srcs = tmpl_hdrs + trampoline_hdrs + generated_cc_files,
         tags = ["manual"],
