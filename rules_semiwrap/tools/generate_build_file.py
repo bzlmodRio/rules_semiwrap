@@ -24,39 +24,39 @@ def _split_ns(name: str) -> T.Tuple[str, str]:
 
 
 def resolve_dependency(dependencies, root_package):
-    resolved = set()
     header_paths = set()
     # logging.error("-----------------")
     for d in dependencies:
         # logging.error("---", d)
         if "native" in d:
-            bazel_dep = f"//subprojects/{d}"
+            # bazel_dep = f"//subprojects/{d}"
             base_lib = re.search("robotpy-native-(.*)", d)[1]
-            # logging.error(base_lib)
-            header_paths.add(f'_local_include_root("//subprojects/robotpy-native-{root_package}:import", "{root_package}")')
+            # # logging.error(base_lib)
+            header_paths.add(f'("//subprojects/robotpy-native-{base_lib}:import", "{base_lib}")')
+            # resolved.add(bazel_dep)
         elif "casters" in d:
             continue
-        # else:
-        #     print(d)
+        else:
+            print(d)
         #     raise
-        #     bazel_dep = f"//subprojects/robotpy-{d}"
-        #     header_paths.add(f"$(location //subprojects/robotpy-native-{root_package}:import)/site-packages/native/{root_package}/include")
-        resolved.add(bazel_dep)
+            # bazel_dep = f"//subprojects/robotpy-{d}"
+            header_paths.add(f'("//subprojects/robotpy-native-{d}:import", "{d}")')
+        
 
     # logging.error(resolved)
     # logging.error(header_paths)
     # logging.error("-----------------")
 
-
+    print(header_paths)
     if header_paths:
         header_paths_str = "[\n            "
         header_paths_str += ",\n            ".join(f'{x}' for x in sorted(header_paths))
         header_paths_str += ",\n        ]"
     else:
-        header_paths = "[]"
+        header_paths_str = "[]"
 
 
-    return resolved, header_paths_str
+    return header_paths_str
 
 
 import os
@@ -77,13 +77,6 @@ def hack_pkgconfig(depends, pkgcfgs):
     # logging.error("/PACKAGE CONFIG HACKS")
         
     os.environ["PKG_CONFIG_PATH"] = os.pathsep.join(pkg_config_paths)
-    # raise
-    # for d in depends:
-    #     if "casters" in d:
-    #         continue
-    #     else:
-    #         raise Exception(d)
-    # pass
 
 
 class _BuildPlanner:
@@ -95,15 +88,6 @@ class _BuildPlanner:
         self.pkgcfgs = pkgcfgs
         
         self.local_caster_targets: T.Dict[str, BuildTargetOutput] = {}
-        
-
-        self.output_buffer.write_trim("""load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library")
-load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "publish_casters", "resolve_casters", "run_header_gen")
-
-def _local_include_root(project_import, include_subpackage):
-    return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
-""")    
-        self.output_buffer.writeln()
 
     def generate(self, output_file: pathlib.Path):
         projectcfg = self.pyproject.project
@@ -111,6 +95,18 @@ def _local_include_root(project_import, include_subpackage):
             self._process_export_type_caster(name, caster_cfg)
             # self.local_caster_targets[name] = f"{name}.pybind11.json"
 
+        self.output_buffer.writeln("""load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library")""")
+
+        if self.local_caster_targets:
+            self.output_buffer.writeln("""load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "publish_casters", "resolve_casters", "run_header_gen")""")
+        else:
+            self.output_buffer.writeln("""load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "resolve_casters", "run_header_gen")""")
+        
+        self.output_buffer.write_trim("""
+def _local_include_root(project_import, include_subpackage):
+    return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
+""")    
+        self.output_buffer.writeln()
 
         for package_name, extension in self._sorted_extension_modules():
             try:
@@ -229,7 +225,7 @@ def _local_include_root(project_import, include_subpackage):
         dep = self.pkgcache.add_local(
             name=name,
             includes=[self.project_root / inc for inc in caster_cfg.includedir],
-            requires=caster_cfg.requires,
+            requires=[], # caster_cfg.requires,
         )
         # caster_dep = LocalDependency(
         #     name=dep.name,
@@ -285,8 +281,9 @@ def _local_include_root(project_import, include_subpackage):
 
         depends = self.pyproject.get_extension_deps(extension)
         
-        bazel_deps, bazel_header_paths = resolve_dependency(depends, package_path_elems[0])
+        bazel_header_paths = resolve_dependency(depends, package_path_elems[0])
 
+        hack_pkgconfig(depends, self.pkgcfgs)
 
         # Search path for wrapping is dictated by package_path and wraps
         search_path, include_directories_uniq, caster_json_file, libinit_modules = (
@@ -447,8 +444,6 @@ def _local_include_root(project_import, include_subpackage):
 
         # Add semiwrap default type casters
         # caster_json_file.append(self.semiwrap_type_caster_path)
-
-        hack_pkgconfig(depends, self.pkgcfgs)
 
         for dep in depends:
             entry = self.pkgcache.get(dep)
@@ -614,8 +609,7 @@ def _local_include_root(project_import, include_subpackage):
         casters_pickle = "{extension.name}.casters.pkl",
         header_gen_config = {extension.name.upper()}_HEADER_GEN,
         deps = header_to_dat_deps{extra_generation_hdrs_str},
-        header_to_dat_deps = ["//subprojects/robotpy-native-{parent_package}:import"],
-        generation_includes = {bazel_header_paths},
+        local_native_libraries = {bazel_header_paths},
     )
 
     native.filegroup(

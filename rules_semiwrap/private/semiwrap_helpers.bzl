@@ -109,98 +109,94 @@ def header_to_dat(
         name,
         casters_pickle,
         include_root,
-        class_names = [],
+        class_name,
+        yml_file,
+        header_location,
         generation_includes = [],
         header_to_dat_deps = [],
         extra_defines = [],
         deps = []):
-    for class_name, yml_file, header_location in class_names:
-        # print(class_name)
-        cmd = _wrapper() + " semiwrap.cmd.header2dat "
-        cmd += "--cpp 202002L "  # TODO
-        cmd += class_name
-        cmd += _location_helper(yml_file)
+    # print(class_name)
+    cmd = _wrapper() + " semiwrap.cmd.header2dat "
+    cmd += "--cpp 202002L "  # TODO
+    cmd += class_name
+    cmd += _location_helper(yml_file)
 
-        # cmd += _location_helper(header_to_dat_deps)
-        cmd += " -I " + include_root
+    # cmd += _location_helper(header_to_dat_deps)
+    cmd += " -I " + include_root
 
-        # TODO TEMP
-        for inc in generation_includes:
-            cmd += " -I " + inc
-        for d in extra_defines:
-            cmd += " -D '" + d + "'"
-        cmd += " " + header_location
+    # TODO TEMP
+    for inc in generation_includes:
+        cmd += " -I " + inc
+    for d in extra_defines:
+        cmd += " -D '" + d + "'"
+    cmd += " " + header_location
 
-        cmd += " " + include_root
-        cmd += _location_helper(RESOLVE_CASTERS_DIR + casters_pickle)
-        cmd += " $(OUTS)"
-        cmd += " bogus c++20 ccache c++ -- -std=c++20"  # TODO
-        native.genrule(
-            name = name + "." + class_name,
-            srcs = [RESOLVE_CASTERS_DIR + casters_pickle] + deps + header_to_dat_deps,
-            outs = [HEADER_DAT_DIR + class_name + ".dat", HEADER_DAT_DIR + class_name + ".d"],
-            cmd = cmd,
-            tools = _wrapper_dep() + [yml_file],
-        )
+    cmd += " " + include_root
+    cmd += _location_helper(RESOLVE_CASTERS_DIR + casters_pickle)
+    cmd += " $(OUTS)"
+    cmd += " bogus c++20 ccache c++ -- -std=c++20"  # TODO
+    native.genrule(
+        name = name + "." + class_name,
+        srcs = [RESOLVE_CASTERS_DIR + casters_pickle] + deps + header_to_dat_deps,
+        outs = [HEADER_DAT_DIR + class_name + ".dat", HEADER_DAT_DIR + class_name + ".d"],
+        cmd = cmd,
+        tools = _wrapper_dep() + [yml_file],
+    )
 
 def dat_to_cc(
         name,
-        class_names = []):
-    for class_name in class_names:
-        dat_file = HEADER_DAT_DIR + class_name + ".dat"
-        cmd = _wrapper() + " semiwrap.cmd.dat2cpp "
-        cmd += _location_helper(dat_file)
-        cmd += " $(OUTS)"
-        native.genrule(
-            name = name + "." + class_name,
-            outs = [DAT_TO_CC_DIR + class_name + ".cpp"],
-            cmd = cmd,
-            tools = _wrapper_dep() + [dat_file],
-        )
+        class_name):
+    dat_file = HEADER_DAT_DIR + class_name + ".dat"
+    cmd = _wrapper() + " semiwrap.cmd.dat2cpp "
+    cmd += _location_helper(dat_file)
+    cmd += " $(OUTS)"
+    native.genrule(
+        name = name + "." + class_name,
+        outs = [DAT_TO_CC_DIR + class_name + ".cpp"],
+        cmd = cmd,
+        tools = _wrapper_dep() + [dat_file],
+    )
 
-def dat_to_tmpl_cpp(name, class_names):
-    for base_class_name, specialization, tmp_class_name in class_names:
-        cmd = _wrapper() + " semiwrap.cmd.dat2tmplcpp "
-        cmd += _location_helper(HEADER_DAT_DIR + base_class_name + ".dat")
-        cmd += " " + specialization
-        cmd += " $(OUTS)"
-        native.genrule(
-            name = name + "." + tmp_class_name,
-            outs = [DAT_TO_TMPL_CC_DIR + tmp_class_name + ".cpp"],
-            cmd = cmd,
-            tools = _wrapper_dep() + [HEADER_DAT_DIR + base_class_name + ".dat"],
-        )
-        break
+def dat_to_tmpl_cpp(name, base_class_name, specialization, tmp_class_name):
+    cmd = _wrapper() + " semiwrap.cmd.dat2tmplcpp "
+    cmd += _location_helper(HEADER_DAT_DIR + base_class_name + ".dat")
+    cmd += " " + specialization
+    cmd += " $(OUTS)"
+    native.genrule(
+        name = name + "." + tmp_class_name,
+        outs = [DAT_TO_TMPL_CC_DIR + tmp_class_name + ".cpp"],
+        cmd = cmd,
+        tools = _wrapper_dep() + [HEADER_DAT_DIR + base_class_name + ".dat"],
+    )
 
-def dat_to_tmpl_hpp(name, class_names):
-    for class_name in class_names:
-        dat_file = HEADER_DAT_DIR + class_name + ".dat"
+def dat_to_tmpl_hpp(name, class_name):
+    dat_file = HEADER_DAT_DIR + class_name + ".dat"
 
-        # print(dat_file)
-        cmd = _wrapper() + " semiwrap.cmd.dat2tmplhpp "
-        cmd += _location_helper(dat_file)
-        cmd += " $(OUTS)"
-        native.genrule(
-            name = name + "." + class_name,
-            outs = [DAT_TO_TMPL_HDR_DIR + class_name + "_tmpl.hpp"],
-            cmd = cmd,
-            tools = _wrapper_dep() + [dat_file],
-        )
+    # print(dat_file)
+    cmd = _wrapper() + " semiwrap.cmd.dat2tmplhpp "
+    cmd += _location_helper(dat_file)
+    cmd += " $(OUTS)"
+    native.genrule(
+        name = name + "." + class_name,
+        outs = [DAT_TO_TMPL_HDR_DIR + class_name + "_tmpl.hpp"],
+        cmd = cmd,
+        tools = _wrapper_dep() + [dat_file],
+    )
 
-def dat_to_trampoline(name, class_names):
-    for dat_file, class_name, output_file in class_names:
-        cmd = _wrapper() + " semiwrap.cmd.dat2trampoline "
+def dat_to_trampoline(name, dat_file, class_name, output_file):
+    cmd = _wrapper() + " semiwrap.cmd.dat2trampoline "
 
-        cmd += _location_helper(HEADER_DAT_DIR + dat_file)
-        cmd += "  " + class_name
-        cmd += " $(OUTS)"
+    cmd += _location_helper(HEADER_DAT_DIR + dat_file)
+    cmd += "  " + class_name
+    cmd += " $(OUTS)"
 
-        native.genrule(
-            name = name + "." + output_file,
-            outs = [DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + output_file],
-            cmd = cmd,
-            tools = _wrapper_dep() + [HEADER_DAT_DIR + dat_file],
-        )
+    native.genrule(
+        name = name + "." + output_file,
+        outs = [DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + output_file],
+        cmd = cmd,
+        tools = _wrapper_dep() + [HEADER_DAT_DIR + dat_file],
+    )
 
 def gen_modinit_hpp(
         name,
@@ -236,6 +232,12 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
     generation_includes = list(generation_includes)
     header_to_dat_deps = list(header_to_dat_deps)
 
+    if header_to_dat_deps:
+        fail()
+        
+    if generation_includes and not (("wpimath" not in name) or ("cscore" not in name)):
+        fail()
+
     for project_label, include_subpackage in local_native_libraries:
         header_to_dat_deps.append(project_label)
         generation_includes.append(_local_include_root(project_label, include_subpackage))
@@ -250,11 +252,9 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
             name = name + ".header_to_dat",
             casters_pickle = casters_pickle,
             include_root = header_gen.header_root,
-            class_names = [(
-                header_gen.class_name,
-                header_gen.yml_file,
-                header_gen.header_file,
-            )],
+            class_name=header_gen.class_name,
+            yml_file=header_gen.yml_file,
+            header_location=header_gen.header_file,
             deps = deps,
             generation_includes = generation_includes,
             extra_defines = generation_defines,
@@ -271,7 +271,7 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
     for header_gen in header_gen_config:
         dat_to_cc(
             name = name + ".dat_to_cc",
-            class_names = [header_gen.class_name],
+            class_name = header_gen.class_name,
         )
         generated_cc_files.append(DAT_TO_CC_DIR + header_gen.class_name + ".cpp")
 
@@ -280,14 +280,16 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
         if header_gen.tmpl_class_names:
             dat_to_tmpl_hpp(
                 name = name + ".dat_to_tmpl_hpp",
-                class_names = [header_gen.class_name],
+                class_name = header_gen.class_name,
             )
             tmpl_hdrs.append(DAT_TO_TMPL_HDR_DIR + header_gen.class_name + "_tmpl.hpp")
 
         for tmpl_class_name, specialization in header_gen.tmpl_class_names:
             dat_to_tmpl_cpp(
                 name = name + ".dat_to_tmpl_cpp",
-                class_names = [(header_gen.class_name, specialization, tmpl_class_name)],
+                base_class_name = header_gen.class_name, 
+                specialization = specialization,
+                tmp_class_name = tmpl_class_name,
             )
             generated_cc_files.append(DAT_TO_TMPL_CC_DIR + tmpl_class_name + ".cpp")
 
@@ -296,7 +298,9 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
         for trampoline_symbol, trampoline_header in header_gen.trampolines:
             dat_to_trampoline(
                 name = name + ".dat2trampoline",
-                class_names = [(header_gen.class_name + ".dat", trampoline_symbol, trampoline_header)],
+                dat_file = header_gen.class_name + ".dat", 
+                class_name = trampoline_symbol, 
+                output_file = trampoline_header,
             )
             trampoline_hdrs.append(DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + trampoline_header)
     cc_library(
