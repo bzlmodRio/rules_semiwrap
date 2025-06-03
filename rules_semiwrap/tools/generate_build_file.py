@@ -123,21 +123,6 @@ def _local_include_root(project_import, include_subpackage):
             except Exception as e:
                 raise Exception(f"{package_name} failed") from e
 
-            # if extension.yaml_path is None:
-            #     yaml_path = pathlib.Path("semiwrap")
-            # else:
-            #     yaml_path = pathlib.Path(pathlib.PurePosixPath(extension.yaml_path))
-            # extra_generation_hdrs = self._process_headers(package_name, extension, yaml_path)
-            # self._write_extension_data(package_name, extension, extra_generation_hdrs)
-
-            # varname = extension.name or package_name.replace(".", "_")
-            # self.pkgcache.add_local(
-            #     name=varname,
-            #     includes=[],
-            #     requires=[],
-            #     # libinit_py=libinit_module,
-            # )
-
         for name, caster_install_path in self.local_caster_targets.items():
             print(caster_cfg)
             self.output_buffer.writeln()
@@ -239,34 +224,11 @@ def _local_include_root(project_import, include_subpackage):
     def _process_export_type_caster(self, name: str, caster_cfg: TypeCasterConfig):
         print("Processing export casters")
 
-        # Need to generate the data file and the .pc file
-        # caster_target = BuildTarget(
-        #     command="publish-casters",
-        #     args=(
-        #         self.pyproject_input,
-        #         name,
-        #         OutputFile(f"{name}{PKGCONF_CASTER_EXT}"),
-        #         OutputFile(f"{name}.pc"),
-        #     ),
-        #     install_path=pathlib.Path(*caster_cfg.pypackage.split(".")),
-        # )
-        # yield caster_target
-
-        # Need an entrypoint to point at the .pc file
-        # yield Entrypoint(group="pkg_config", name=name, package=caster_cfg.pypackage)
-
         dep = self.pkgcache.add_local(
             name=name,
             includes=[self.project_root / inc for inc in caster_cfg.includedir],
             requires=[],  # caster_cfg.requires,
         )
-        # caster_dep = LocalDependency(
-        #     name=dep.name,
-        #     include_paths=tuple(dep.include_path),
-        #     depends=tuple([self._resolve_dep(cd) for cd in caster_cfg.requires]),
-        # )
-        # self.local_dependencies[dep.name] = caster_dep
-        # yield caster_dep
 
         # The .pc file cannot be used in the build, but the data file must be, so
         # store it so it can be used elsewhere
@@ -363,14 +325,7 @@ def _local_include_root(project_import, include_subpackage):
         libinit_module = None
         if libinit_modules:
             libinit_py = extension.libinit or f"_init_{module_name}.py"
-            # libinit_tgt = BuildTarget(
-            #     command="gen-libinit-py",
-            #     args=(OutputFile(libinit_py), *libinit_modules),
-            #     install_path=package_path,
-            # )
-
             libinit_module = f"{parent_package}.{libinit_py}"[:-3]
-            # self.pyi_args += [libinit_module, libinit_tgt]
 
         #
         # Process the headers
@@ -425,16 +380,6 @@ def _local_include_root(project_import, include_subpackage):
 
             trampolines.append((name, f"{cls_ns}__{cls_name}.hpp"))
 
-        # output = "["
-        # if trampolines:
-        #     # output += "\n            "
-        #     output += "\n                            "
-        #     output += ",\n                            ".join(f'("{t[0]}", "{t[1]}")' for t in trampolines)
-        #     output += ",\n                        "
-        #     # for trampoline in trampolines:
-        #     #     output += f'("{trampoline[0]}", "{trampoline[1]}"), '
-
-        # output += "]"
         return trampolines
 
     def _process_tmpl_str(self, yml: str, ayml: AutowrapConfigYaml) -> str:
@@ -530,15 +475,8 @@ def _local_include_root(project_import, include_subpackage):
         define_args = []
         local_hdrs = []
 
-        # raise Exception(extension.name)
+        root_package = package_path.parts[0]
 
-        print(package_path)
-        root_package = package_path
-
-        # with self.output_buffer.indent(4):
-        #     self.output_buffer.writeln(f"{extension.name.upper()}_HEADER_GEN = [")
-
-        #     with self.output_buffer.indent(4):
         for yml, hdr in self.pyproject.get_extension_headers(extension):
             yml_input = yaml_path / f"{yml}.yml"
 
@@ -553,46 +491,6 @@ def _local_include_root(project_import, include_subpackage):
             )
 
         return datfiles, module_sources, subpackages, local_hdrs
-
-    # def _write_extension_data(self, package_name: str, extension: ExtensionModuleConfig, extra_generation_hdrs):
-    #     depends = self.pyproject.get_extension_deps(extension)
-    #     ignored_depends = []
-    #     for d in depends:
-    #         if "casters" in d:
-    #             ignored_depends.append(d)
-
-    #     for id in ignored_depends:
-    #         depends.remove(id)
-
-    #     extra_generation_hdrs_str = ""
-    #     if extra_generation_hdrs:
-    #         extra_generation_hdrs_str += " + ["
-    #         extra_generation_hdrs_str += ",".join(f'"{x}"' for x in extra_generation_hdrs)
-    #         extra_generation_hdrs_str += "]"
-
-    #     # Search path for wrapping is dictated by package_path and wraps
-    #     search_path, include_directories_uniq, caster_json_file, libinit_modules = (
-    #         self._prepare_dependency_paths(depends, extension)
-    #     )
-
-    #     root_package = package_name.split('.')[0]
-
-    #     bazel_deps, bazel_header_paths = resolve_dependency(depends, root_package)
-
-    #     libinit_modules = "[" + ", ".join(f'"{x}"' for x in libinit_modules) + "]"
-    #     caster_json_file = "[" + ", ".join(f'"{x}"' for x in sorted(set(caster_json_file))) + "]"
-    #     print(caster_json_file)
-    #     # raise
-
-    #     with self.output_buffer.indent(4):
-    #         package_path_elems = package_name.split(".")
-    #         parent_package = ".".join(package_path_elems[:-1])
-    #         module_name = package_path_elems[-1]
-    #         package_path = pathlib.Path(*package_path_elems[:-1])
-
-    #         libinit = extension.libinit or f"_init_{module_name}"
-
-    #         package_init_py = package_path / "__init__.py"
 
     def _locate_header(self, hdr: str, search_path: T.List[pathlib.Path]):
         phdr = pathlib.PurePosixPath(hdr)
@@ -717,11 +615,12 @@ def _local_include_root(project_import, include_subpackage):
 
         local_hdrs = []
 
+        # TODO hack
+        if root_package == "hal":
+            root_package = "wpihal"
+
         if "site-packages" in str(h_root):
             header_root = f'_local_include_root("//subprojects/robotpy-native-{root_package}:import", "{root_package}")'
-        # if str(h_root).startswith("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy"):
-        #     header_root = f"$(location //subprojects/robotpy-native-{root_package}:import)/site-packages/native/{root_package}/include"
-        #     # header_root = str(h_root)[len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/bazel-mostrobotpy/"):]
         elif str(h_root).startswith(
             "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy"
         ):

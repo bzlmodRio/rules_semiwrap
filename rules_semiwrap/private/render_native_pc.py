@@ -33,8 +33,6 @@ def main():
     if project_name in ["ntcore", "wpinet", "wpimath"]:
         requires.append("robotpy-native-wpiutil")
 
-    #     output_file = sys.argv[1]
-
     with open(args.output_file, "w") as f:
         f.write(
             """prefix=${pcfiledir}
