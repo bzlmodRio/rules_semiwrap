@@ -234,7 +234,7 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
 
     if header_to_dat_deps:
         fail()
-        
+
     if generation_includes and not (("wpimath" not in name) or ("cscore" not in name)):
         fail()
 
@@ -252,9 +252,9 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
             name = name + ".header_to_dat",
             casters_pickle = casters_pickle,
             include_root = header_gen.header_root,
-            class_name=header_gen.class_name,
-            yml_file=header_gen.yml_file,
-            header_location=header_gen.header_file,
+            class_name = header_gen.class_name,
+            yml_file = header_gen.yml_file,
+            header_location = header_gen.header_file,
             deps = deps,
             generation_includes = generation_includes,
             extra_defines = generation_defines,
@@ -287,7 +287,7 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
         for tmpl_class_name, specialization in header_gen.tmpl_class_names:
             dat_to_tmpl_cpp(
                 name = name + ".dat_to_tmpl_cpp",
-                base_class_name = header_gen.class_name, 
+                base_class_name = header_gen.class_name,
                 specialization = specialization,
                 tmp_class_name = tmpl_class_name,
             )
@@ -298,8 +298,8 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
         for trampoline_symbol, trampoline_header in header_gen.trampolines:
             dat_to_trampoline(
                 name = name + ".dat2trampoline",
-                dat_file = header_gen.class_name + ".dat", 
-                class_name = trampoline_symbol, 
+                dat_file = header_gen.class_name + ".dat",
+                class_name = trampoline_symbol,
                 output_file = trampoline_header,
             )
             trampoline_hdrs.append(DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + trampoline_header)

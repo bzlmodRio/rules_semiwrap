@@ -15,7 +15,7 @@ elif os.path.exists(PYPROJECT_FILE_TMPL.format("313")):
 else:
     raise Exception("Unknown version")
 
-with open(PYPROJECT_FILE, "r",) as f:
+with open(PYPROJECT_FILE, "r") as f:
     contents = f.read()
 
 print(contents)

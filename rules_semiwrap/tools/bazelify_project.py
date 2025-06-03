@@ -6,10 +6,14 @@ import shutil
 def generate_files(project_dir: pathlib.Path):
     project_name = project_dir.name
 
-    shutil.copy("rules_semiwrap/tools/bazlify_project_files/0001-Patch-to-robotpy-version.patch", project_dir)
+    shutil.copy(
+        "rules_semiwrap/tools/bazlify_project_files/0001-Patch-to-robotpy-version.patch",
+        project_dir,
+    )
 
-    with open(project_dir / "MODULE.bazel", 'w') as f:
-        f.write(f"""bazel_dep(name = "rules_python", version = "1.0.0")
+    with open(project_dir / "MODULE.bazel", "w") as f:
+        f.write(
+            f"""bazel_dep(name = "rules_python", version = "1.0.0")
 bazel_dep(name = "pybind11_bazel", version = "2.13.6")
 bazel_dep(name = "rules_cc", version = "0.0.17")
 bazel_dep(name = "platforms", version = "0.0.10")
@@ -53,10 +57,12 @@ pip.parse(
     requirements_lock = "//:requirements_lock.txt",
 )
 use_repo(pip, "{project_name.replace("-", "_")}_pip_deps")
-""")
+"""
+        )
 
-    with open(project_dir / "BUILD.bazel", 'w') as f:
-        f.write(f"""load("@{project_name.replace("-", "_")}_pip_deps//:requirements.bzl", "data_requirement")
+    with open(project_dir / "BUILD.bazel", "w") as f:
+        f.write(
+            f"""load("@{project_name.replace("-", "_")}_pip_deps//:requirements.bzl", "data_requirement")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "robotpy_library")
@@ -69,13 +75,15 @@ compile_pip_requirements(
     requirements_txt = "requirements_lock.txt",
 )
 
-""")
+"""
+        )
 
-    with open(project_dir / ".bazelversion", 'w') as f:
+    with open(project_dir / ".bazelversion", "w") as f:
         f.write("7.6.1\n")
-        
-    with open(project_dir / ".bazelrc", 'w') as f:
-        f.write("""try-import %workspace%/.bazel_auth.rc
+
+    with open(project_dir / ".bazelrc", "w") as f:
+        f.write(
+            """try-import %workspace%/.bazel_auth.rc
 try-import %workspace%/user.bazelrc
 
 test --test_output=errors
@@ -96,13 +104,15 @@ build:windows --copt=/std:c++20
 build:windows --copt=/Zc:__cplusplus
 build:windows --copt=/Zc:preprocessor
 build:windows --copt=/utf-8
-""")
+"""
+        )
 
-    with open(project_dir / "WORKSPACE", 'w') as f:
+    with open(project_dir / "WORKSPACE", "w") as f:
         f.write("\n")
 
-    with open(project_dir / "tests/BUILD.bazel", 'w') as f:
-        f.write("""load("@rules_semiwrap//:defs.bzl", "robotpy_py_test")
+    with open(project_dir / "tests/BUILD.bazel", "w") as f:
+        f.write(
+            """load("@rules_semiwrap//:defs.bzl", "robotpy_py_test")
 
 robotpy_py_test(
     "tests",
@@ -118,20 +128,26 @@ robotpy_py_test(
         "//:import",
     ],
 )
-""")
+"""
+        )
 
-    with open(project_dir / "requirements.txt", 'w') as f:
-        f.write("""wpilib~=2025.3.2.2
-pytest""")
+    with open(project_dir / "requirements.txt", "w") as f:
+        f.write(
+            """wpilib~=2025.3.2.2
+pytest"""
+        )
 
-    with open(project_dir / "requirements_lock.txt", 'w') as f:
+    with open(project_dir / "requirements_lock.txt", "w") as f:
         f.write("\n")
+
 
 def main():
 
     # project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-rev")
     # project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-ctre")
-    project_dir = pathlib.Path("/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-navx")
+    project_dir = pathlib.Path(
+        "/home/pjreiniger/git/robotpy/robotpy_monorepo/robotpy-navx"
+    )
 
     generate_files(project_dir)
 
