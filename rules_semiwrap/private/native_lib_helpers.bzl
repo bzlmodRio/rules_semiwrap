@@ -16,6 +16,7 @@ def create_native_library(
         strip_pkg_prefix,
         version,
         deps = [],
+        entry_points = {},
         visibility = ["//visibility:public"]):
     if deps:
         fail("Don't use deps directly")
@@ -77,6 +78,7 @@ def create_native_library(
         version = version,
         deps = [":{}-pkg".format(package_name)],
         strip_path_prefixes = strip_pkg_prefix,
+        entry_points = entry_points,
     )
 
     pycross_wheel_library(

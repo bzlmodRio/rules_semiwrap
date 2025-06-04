@@ -78,6 +78,8 @@ def robotpy_library(
         deps = [],
         robotpy_wheel_deps = [],
         entry_points = {},
+        package_python_tag = "cp311",
+        package_abi = "cp311",
         visibility = None,
         **kwargs):
     if deps:
@@ -131,8 +133,8 @@ def robotpy_library(
             "@bazel_tools//src/conditions:windows": "win_amd64",
             "//conditions:default": "manylinux_2_35_x86_64",
         }),
-        python_tag = "cp311",
-        abi = "cp311",
+        python_tag = package_python_tag,
+        abi = package_abi,
         stamp = 1,
         version = version,
         deps = data + [":{}".format(name)],
