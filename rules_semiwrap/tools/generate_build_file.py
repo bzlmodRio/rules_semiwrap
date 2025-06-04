@@ -32,7 +32,7 @@ def resolve_dependency(dependencies, root_package):
             base_lib = re.search("robotpy-native-(.*)", d)[1]
             # # logging.error(base_lib)
             header_paths.add(
-                f'("//subprojects/robotpy-native-{base_lib}:import", "{base_lib}")'
+                f'local_native_libraries_helper("{base_lib}")'
             )
             # resolved.add(bazel_dep)
         elif "casters" in d:
@@ -41,7 +41,7 @@ def resolve_dependency(dependencies, root_package):
             print(d)
             #     raise
             # bazel_dep = f"//subprojects/robotpy-{d}"
-            header_paths.add(f'("//subprojects/robotpy-native-{d}:import", "{d}")')
+            header_paths.add(f'local_native_libraries_helper("{d}")')
 
     # logging.error(resolved)
     # logging.error(header_paths)
@@ -94,7 +94,8 @@ class _BuildPlanner:
         projectcfg = self.pyproject.project
         for name, caster_cfg in projectcfg.export_type_casters.items():
             self._process_export_type_caster(name, caster_cfg)
-            # self.local_caster_targets[name] = f"{name}.pybind11.json"
+            # print(caster_cfg)
+            # self.local_caster_targets[name] = f"{caster_cfg.pypackage}"
 
         self.output_buffer.writeln(
             """load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library")"""
@@ -108,13 +109,8 @@ class _BuildPlanner:
             self.output_buffer.writeln(
                 """load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "resolve_casters", "run_header_gen")"""
             )
+        self.output_buffer.writeln('load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_include_root", "resolve_caster_file")')
 
-        self.output_buffer.write_trim(
-            """
-def _local_include_root(project_import, include_subpackage):
-    return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
-"""
-        )
         self.output_buffer.writeln()
 
         for package_name, extension in self._sorted_extension_modules():
@@ -124,7 +120,6 @@ def _local_include_root(project_import, include_subpackage):
                 raise Exception(f"{package_name} failed") from e
 
         for name, caster_install_path in self.local_caster_targets.items():
-            print(caster_cfg)
             self.output_buffer.writeln()
             self.output_buffer.write_trim(
                 f"""
@@ -150,8 +145,6 @@ def _local_include_root(project_import, include_subpackage):
         for package_name, extension in self.pyproject.project.extension_modules.items():
             if extension.ignore:
                 continue
-
-            print(extension)
 
             package_path_elems = package_name.split(".")
             package_path = pathlib.Path(*package_path_elems[:-1])
@@ -212,7 +205,6 @@ def _local_include_root(project_import, include_subpackage):
             )
             + "\n    ]"
         )
-        print(libinit_files_text)
         self.output_buffer.writeln()
         self.output_buffer.writeln(
             f"""def libinit_files():\n    return {libinit_files_text}"""
@@ -232,7 +224,7 @@ def _local_include_root(project_import, include_subpackage):
 
         # The .pc file cannot be used in the build, but the data file must be, so
         # store it so it can be used elsewhere
-        self.local_caster_targets[name] = pathlib.Path(*caster_cfg.pypackage.split("."))
+        self.local_caster_targets[name] = caster_cfg.pypackage
 
     def _sorted_extension_modules(
         self,
@@ -286,9 +278,17 @@ def _local_include_root(project_import, include_subpackage):
         )
 
         if extension.name == "wpiutil":
-            search_path.append(pathlib.Path("subprojects/robotpy-wpiutil/wpiutil/"))
+            search_path.append(
+                pathlib.Path(
+                    "subprojects/robotpy-wpiutil/wpiutil/"
+                )
+            )
         elif "wpilib" in extension.name:
-            search_path.append(pathlib.Path("subprojects/robotpy-wpilib/wpilib/src"))
+            search_path.append(
+                pathlib.Path(
+                    "subprojects/robotpy-wpilib/wpilib/src"
+                )
+            )
         elif "cscore" in extension.name:
             search_path.append(
                 pathlib.Path(
@@ -347,6 +347,7 @@ def _local_include_root(project_import, include_subpackage):
 
         self._write_extension_function_footer(
             extension,
+            caster_json_file,
             bazel_header_paths,
             local_hdrs,
             libinit_modules,
@@ -403,21 +404,13 @@ def _local_include_root(project_import, include_subpackage):
             entry = self.pkgcache.get(name)
 
             if name in self.local_caster_targets:
-                caster_json_file.append(self.local_caster_targets[name])
+                caster_json_file.append(":" + self.local_caster_targets[name] + "/" + name + ".pybind11.json")
             else:
                 tc = entry.type_casters_path
                 if tc and tc not in caster_json_file:
-                    # print("--ff--", tc)
-                    # print(os.environ)
-                    tc = str(tc).replace(
-                        "/home/pjreiniger/git/robotpy/robotpy_monorepo/rules_semiwrap/.venv/lib/python3.10/site-packages/wpiutil/wpiutil-casters.pybind11.json",
-                        "//subprojects/robotpy-wpiutil:generated/publish_casters/wpiutil-casters.pybind11.json",
-                    )
-                    tc = str(tc).replace(
-                        "/home/pjreiniger/git/robotpy/robotpy_monorepo/rules_semiwrap/.venv/lib/python3.10/site-packages/wpimath/wpimath-casters.pybind11.json",
-                        "//subprojects/robotpy-wpimath:generated/publish_casters/wpimath-casters.pybind11.json",
-                    )
-                    caster_json_file.append(tc)
+                    resolve_str = f'resolve_caster_file("{entry.name}")'
+                    if resolve_str not in caster_json_file:
+                        caster_json_file.append(resolve_str)
 
             for req in entry.requires:
                 if req not in checked:
@@ -506,6 +499,7 @@ def _local_include_root(project_import, include_subpackage):
     def _write_extension_function_footer(
         self,
         extension,
+        caster_json_file,
         bazel_header_paths,
         local_hdrs,
         libinit_modules,
@@ -515,7 +509,7 @@ def _local_include_root(project_import, include_subpackage):
         module_name,
         package_path,
     ):
-        caster_json_file = []
+        # caster_json_file = []
         # libinit_modules = []
         # package_path = ""
         # parent_package = ""
@@ -531,14 +525,27 @@ def _local_include_root(project_import, include_subpackage):
                 " + [" + ",".join(f'"{x}"' for x in local_hdrs) + "]"
             )
 
+        caster_files_str = ""
+        caster_deps_str = ""
+        # if caster_json_file:
+        for cjf in caster_json_file:
+            if cjf.startswith("resolve_caster_file"):
+                caster_deps_str += cjf + ", "
+            else:
+                caster_files_str += f'"{cjf}"'
+
+        if caster_files_str:
+            caster_files_str = f"\n        caster_files = [{caster_files_str}],"
+        if caster_deps_str:
+            caster_deps_str = f"\n        caster_deps = [{caster_deps_str[:-2]}],"
+
         with self.output_buffer.indent(4):
             self.output_buffer.write_trim(
                 f"""
     ]
 
     resolve_casters(
-        name = "{extension.name}.resolve_casters",
-        caster_files = {caster_json_file},
+        name = "{extension.name}.resolve_casters",{caster_files_str}{caster_deps_str}
         casters_pkl_file = "{extension.name}.casters.pkl",
         dep_file = "{extension.name}.casters.d",
     )
@@ -612,20 +619,27 @@ def _local_include_root(project_import, include_subpackage):
             root_package = "wpihal"
 
         if "site-packages" in str(h_root):
-            header_root = f'_local_include_root("//subprojects/robotpy-native-{root_package}:import", "{root_package}")'
-        elif str(h_root).startswith(
-            "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy"
-        ):
-            header_root = (
-                '"'
-                + str(h_root)[
-                    len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/") :
-                ]
-                + '"'
-            )
-            local_hdrs.append(root_package / h_input.relative_to(h_root))
+            if root_package == "robotpy_apriltag":
+                root_package = "apriltag"
+            header_root = f'resolve_include_root("//subprojects/robotpy-native-{root_package}", "{root_package}")'
+        # elif str(h_root).startswith(
+        #     "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy"
+        # ):
+            # header_root = (
+            #     '"'
+            #     + str(h_root)[
+            #         len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/") :
+            #     ]
+            #     + '"'
+            # )
+            # local_hdrs.append(root_package / h_input.relative_to(h_root))
         else:
-            header_root = h_input
+            print("-----------------------")
+            print(h_input)
+            print(h_root)
+            print("-----------------------")
+            header_root = f'"{h_root}"'
+            local_hdrs.append(root_package / h_input.relative_to(h_root))
 
         header_suffix = h_input.relative_to(h_root)
 

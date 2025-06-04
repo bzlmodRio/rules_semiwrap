@@ -6,7 +6,6 @@ HEADER_DAT_DIR = "generated/header_to_dat/"
 DAT_TO_CC_DIR = "generated/dat_to_cc/"
 DAT_TO_TMPL_CC_DIR = "generated/dat_to_tmpl_cc/"
 DAT_TO_TMPL_HDR_DIR = "generated/dat_to_tmpl_hdr/"
-DAT_TO_TRAMPOLINE_HDR_DIR = "generated/dat_to_trampoline_hdr/"
 GEN_MODINIT_HDR_DIR = "generated/gen_modinit_hdr/"
 
 def _location_helper(filename):
@@ -43,8 +42,8 @@ def publish_casters(
 def resolve_casters(
         name,
         casters_pkl_file,
-        caster_files,
         dep_file,
+        caster_files = [],
         caster_deps = []):
     cmd = _wrapper() + " semiwrap.cmd.resolve_casters "
     cmd += " $(OUTS)"
@@ -52,6 +51,11 @@ def resolve_casters(
     cmd += _location_helper("@rules_semiwrap//:semiwrap_casters")
 
     resolved_caster_files = []
+
+    deps = []
+    for dep, caster_path in caster_deps:
+        deps.append(dep)
+        cmd += " " + caster_path
 
     for cfd in caster_files:
         if cfd.startswith(":"):
@@ -62,7 +66,7 @@ def resolve_casters(
 
     native.genrule(
         name = name,
-        srcs = resolved_caster_files + caster_deps,
+        srcs = resolved_caster_files + deps,
         outs = [RESOLVE_CASTERS_DIR + casters_pkl_file, RESOLVE_CASTERS_DIR + dep_file],
         cmd = cmd,
         tools = _wrapper_dep() + ["@rules_semiwrap//:semiwrap_casters"],
@@ -193,7 +197,7 @@ def dat_to_trampoline(name, dat_file, class_name, output_file):
 
     native.genrule(
         name = name + "." + output_file,
-        outs = [DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + output_file],
+        outs = [output_file],
         cmd = cmd,
         tools = _wrapper_dep() + [HEADER_DAT_DIR + dat_file],
     )
@@ -226,7 +230,7 @@ def gen_modinit_hpp(
 def make_pyi(name):
     cmd = _wrapper() + " semiwrap.cmd.make_pyi "
 
-def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps = [], local_native_libraries = []):
+def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps = [], local_native_libraries = []):
     temp_yml_files = []
 
     generation_includes = list(generation_includes)
@@ -296,13 +300,14 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
     trampoline_hdrs = []
     for header_gen in header_gen_config:
         for trampoline_symbol, trampoline_header in header_gen.trampolines:
+            output_path = trampoline_subpath + "/trampolines/" + trampoline_header
             dat_to_trampoline(
                 name = name + ".dat2trampoline",
                 dat_file = header_gen.class_name + ".dat",
                 class_name = trampoline_symbol,
-                output_file = trampoline_header,
+                output_file = output_path,
             )
-            trampoline_hdrs.append(DAT_TO_TRAMPOLINE_HDR_DIR + "trampolines/" + trampoline_header)
+            trampoline_hdrs.append(output_path)
     cc_library(
         name = name + ".tmpl_hdrs",
         hdrs = tmpl_hdrs,
@@ -311,7 +316,7 @@ def run_header_gen(name, casters_pickle, header_gen_config, deps = [], generatio
     cc_library(
         name = name + ".trampoline_hdrs",
         hdrs = trampoline_hdrs,
-        strip_include_prefix = DAT_TO_TRAMPOLINE_HDR_DIR,
+        strip_include_prefix = trampoline_subpath,
     )
 
     native.filegroup(

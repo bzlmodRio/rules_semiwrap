@@ -77,6 +77,7 @@ def robotpy_library(
         data = [],
         deps = [],
         robotpy_wheel_deps = [],
+        entry_points = {},
         visibility = None,
         **kwargs):
     if deps:
@@ -138,6 +139,7 @@ def robotpy_library(
         # deps = data + [":{}".format(name)] + ["{}.copy_headers".format(name)],
         # data = ,
         strip_path_prefixes = strip_path_prefixes,
+        entry_points = entry_points,
     )
 
     pycross_wheel_library(
