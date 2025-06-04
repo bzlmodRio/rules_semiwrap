@@ -111,8 +111,6 @@ class _BuildPlanner:
             'load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_include_root", "resolve_caster_file")'
         )
 
-        self.output_buffer.writeln()
-
         for package_name, extension in self._sorted_extension_modules():
             try:
                 self._process_extension_module(package_name, extension)
@@ -148,19 +146,20 @@ class _BuildPlanner:
 
             package_path_elems = package_name.split(".")
             package_path = pathlib.Path(*package_path_elems[:-1])
+            module_name = package_path_elems[-1]
 
             with self.output_buffer.indent(4):
                 self.output_buffer.write_trim(
                     f"""
                 copy_extension_library(
                     name = "copy_{extension.name}",
-                    extension = "_{extension.name}",
+                    extension = "{module_name}",
                     output_directory = "{package_path}/",
                 )
                 """
                 )
 
-            all_extension_names.append(extension.name)
+            all_extension_names.append(("/".join(package_path_elems[:-1]), extension.name))
 
         self.output_buffer.writeln()
         with self.output_buffer.indent(4):
@@ -178,7 +177,7 @@ class _BuildPlanner:
                 if extension.ignore:
                     continue
                 self.output_buffer.writeln(
-                    f'        "{extension.name}/{extension.name}.pc",'
+                    f'        "{package_path_elems[0]}/{extension.name}.pc",'
                 )
             for caster_name, caster_install_path in self.local_caster_targets.items():
                 self.output_buffer.writeln(
@@ -191,17 +190,19 @@ class _BuildPlanner:
 
         copy_extension_text = (
             f'[\n        ":{package_path_elems[0]}.generated_data_files",\n        '
-            + "\n        ".join(f'":copy_{x}",' for x in all_extension_names)
-            + "\n    ]"
+            + "\n        ".join(f'":copy_{x}",' for _, x in all_extension_names)
         )
+        copy_extension_text += "\n        " + "\n        ".join(f'":{x}.trampoline_hdr_files",' for _, x in all_extension_names)
+        copy_extension_text    += "\n    ]"
+        
 
         self.output_buffer.writeln()
         self.output_buffer.writeln(f"    return {copy_extension_text}")
 
         libinit_files_text = (
             "[\n        "
-            + "\n            ".join(
-                f'"{x}/_init__{x}.py",' for x in all_extension_names
+            + "\n        ".join(
+                f'"{x}/_init__{x}.py",' for (x, y) in all_extension_names
             )
             + "\n    ]"
         )
@@ -489,6 +490,7 @@ class _BuildPlanner:
         )
 
     def _write_extension_function_header(self, extension):
+        self.output_buffer.writeln()
         self.output_buffer.writeln(
             f"""def {extension.name}_extension(entry_point, deps, header_to_dat_deps, extension_name = None, extra_hdrs = [], extra_srcs = [], includes = []):"""
         )
@@ -516,6 +518,11 @@ class _BuildPlanner:
         # module_name = ""
         extra_generation_hdrs_str = ""
         root_package = ""
+
+        subpackage_name = "/".join(package_name.split(".")[:-1])
+        
+        package_path_elems = package_name.split(".")
+        module_name = package_path_elems[-1]
 
         libinit_modules_str = "[" + ", ".join(f'"{x}"' for x in libinit_modules) + "]"
         if local_hdrs:
@@ -574,6 +581,7 @@ class _BuildPlanner:
         name = "{extension.name}",
         casters_pickle = "{extension.name}.casters.pkl",
         header_gen_config = {extension.name.upper()}_HEADER_GEN,
+        trampoline_subpath = "{subpackage_name}",
         deps = header_to_dat_deps{extra_generation_hdrs_str},
         local_native_libraries = {bazel_header_paths},
     )
