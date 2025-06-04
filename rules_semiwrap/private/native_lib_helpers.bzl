@@ -17,9 +17,18 @@ def create_native_library(
         version,
         deps = [],
         entry_points = {},
+        package_summary = None,
+        package_project_urls = None,
+        package_author_email = None,
+        package_requires = None,
         visibility = ["//visibility:public"]):
     if deps:
         fail("Don't use deps directly")
+        
+    if package_summary == None:
+        fail()
+    if package_requires == None:
+        fail()
 
     copy_to_directory(
         name = "{}.copy_headers".format(name),
@@ -79,6 +88,10 @@ def create_native_library(
         deps = [":{}-pkg".format(package_name)],
         strip_path_prefixes = strip_pkg_prefix,
         entry_points = entry_points,
+        summary = package_summary,
+        project_urls = package_project_urls,
+        author_email = package_author_email,
+        requires = package_requires,
     )
 
     pycross_wheel_library(

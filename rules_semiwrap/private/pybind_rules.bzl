@@ -80,11 +80,27 @@ def robotpy_library(
         entry_points = {},
         package_python_tag = "cp311",
         package_abi = "cp311",
+        package_summary = None,
+        package_project_urls = None,
+        package_author_email = None,
+        package_requires = None,
         visibility = None,
         **kwargs):
     if deps:
         fail()
 
+    if package_summary == None:
+        fail()
+    if package_project_urls == None:
+        fail()
+    if package_author_email == None:
+        fail()
+    if package_author_email == None:
+        fail()
+    if package_requires == None:
+        fail()
+
+    print(robotpy_wheel_deps)
     py_library(
         name = name,
         visibility = None,
@@ -137,7 +153,11 @@ def robotpy_library(
         abi = package_abi,
         stamp = 1,
         version = version,
+        summary = package_summary,
+        project_urls = package_project_urls,
+        author_email = package_author_email,
         deps = data + [":{}".format(name)],
+        requires = package_requires,
         # deps = data + [":{}".format(name)] + ["{}.copy_headers".format(name)],
         # data = ,
         strip_path_prefixes = strip_path_prefixes,

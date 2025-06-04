@@ -158,26 +158,34 @@ class _BuildPlanner:
                 )
                 """
                 )
-
-            all_extension_names.append(("/".join(package_path_elems[:-1]), extension.name))
+            
+            # libinit_py = extension.libinit or f"_init_{module_name}.py"
+            all_extension_names.append(("/".join(package_path_elems[:-1]), extension.name, module_name))
 
         self.output_buffer.writeln()
         with self.output_buffer.indent(4):
             self.output_buffer.write_trim(
                 f"""
                 native.filegroup(
-                    name = "{extension.name}.generated_data_files",
+                    name = "{package_path_elems[0]}.generated_data_files",
                     srcs = [
             """
             )
+
+            # print(self.pyproject)
+            # print(self.pyproject.package_root)
+            # raise
             for (
                 package_name,
                 extension,
             ) in self.pyproject.project.extension_modules.items():
                 if extension.ignore:
                     continue
+                package_path_elems = package_name.split(".")
+                package_path = pathlib.Path(*package_path_elems[:-1])
+                module_name = package_path_elems[-1]
                 self.output_buffer.writeln(
-                    f'        "{package_path_elems[0]}/{extension.name}.pc",'
+                    f'        "{package_path}/{extension.name}.pc",'
                 )
             for caster_name, caster_install_path in self.local_caster_targets.items():
                 self.output_buffer.writeln(
@@ -190,9 +198,9 @@ class _BuildPlanner:
 
         copy_extension_text = (
             f'[\n        ":{package_path_elems[0]}.generated_data_files",\n        '
-            + "\n        ".join(f'":copy_{x}",' for _, x in all_extension_names)
+            + "\n        ".join(f'":copy_{x}",' for _, x, z in all_extension_names)
         )
-        copy_extension_text += "\n        " + "\n        ".join(f'":{x}.trampoline_hdr_files",' for _, x in all_extension_names)
+        copy_extension_text += "\n        " + "\n        ".join(f'":{x}.trampoline_hdr_files",' for _, x, z in all_extension_names)
         copy_extension_text    += "\n    ]"
         
 
@@ -202,7 +210,7 @@ class _BuildPlanner:
         libinit_files_text = (
             "[\n        "
             + "\n        ".join(
-                f'"{x}/_init__{x}.py",' for (x, y) in all_extension_names
+                f'"{x}/_init_{z}.py",' for (x, y, z) in all_extension_names
             )
             + "\n    ]"
         )
@@ -567,6 +575,7 @@ class _BuildPlanner:
         module_pkg_name = "{package_name}",
         output_file = "{extension.name}.pc",
         pkg_name = "{extension.name}",
+        install_path = "{package_path}",
         project_file = "pyproject.toml",
     )
 
