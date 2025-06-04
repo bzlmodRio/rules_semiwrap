@@ -31,9 +31,7 @@ def resolve_dependency(dependencies, root_package):
             # bazel_dep = f"//subprojects/{d}"
             base_lib = re.search("robotpy-native-(.*)", d)[1]
             # # logging.error(base_lib)
-            header_paths.add(
-                f'local_native_libraries_helper("{base_lib}")'
-            )
+            header_paths.add(f'local_native_libraries_helper("{base_lib}")')
             # resolved.add(bazel_dep)
         elif "casters" in d:
             continue
@@ -109,7 +107,9 @@ class _BuildPlanner:
             self.output_buffer.writeln(
                 """load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "resolve_casters", "run_header_gen")"""
             )
-        self.output_buffer.writeln('load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_include_root", "resolve_caster_file")')
+        self.output_buffer.writeln(
+            'load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_include_root", "resolve_caster_file")'
+        )
 
         self.output_buffer.writeln()
 
@@ -278,17 +278,9 @@ class _BuildPlanner:
         )
 
         if extension.name == "wpiutil":
-            search_path.append(
-                pathlib.Path(
-                    "subprojects/robotpy-wpiutil/wpiutil/"
-                )
-            )
+            search_path.append(pathlib.Path("subprojects/robotpy-wpiutil/wpiutil/"))
         elif "wpilib" in extension.name:
-            search_path.append(
-                pathlib.Path(
-                    "subprojects/robotpy-wpilib/wpilib/src"
-                )
-            )
+            search_path.append(pathlib.Path("subprojects/robotpy-wpilib/wpilib/src"))
         elif "cscore" in extension.name:
             search_path.append(
                 pathlib.Path(
@@ -404,7 +396,13 @@ class _BuildPlanner:
             entry = self.pkgcache.get(name)
 
             if name in self.local_caster_targets:
-                caster_json_file.append(":" + self.local_caster_targets[name] + "/" + name + ".pybind11.json")
+                caster_json_file.append(
+                    ":"
+                    + self.local_caster_targets[name]
+                    + "/"
+                    + name
+                    + ".pybind11.json"
+                )
             else:
                 tc = entry.type_casters_path
                 if tc and tc not in caster_json_file:
@@ -625,14 +623,14 @@ class _BuildPlanner:
         # elif str(h_root).startswith(
         #     "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy"
         # ):
-            # header_root = (
-            #     '"'
-            #     + str(h_root)[
-            #         len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/") :
-            #     ]
-            #     + '"'
-            # )
-            # local_hdrs.append(root_package / h_input.relative_to(h_root))
+        # header_root = (
+        #     '"'
+        #     + str(h_root)[
+        #         len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/") :
+        #     ]
+        #     + '"'
+        # )
+        # local_hdrs.append(root_package / h_input.relative_to(h_root))
         else:
             print("-----------------------")
             print(h_input)
