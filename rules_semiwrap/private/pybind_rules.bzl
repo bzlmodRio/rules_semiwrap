@@ -100,7 +100,6 @@ def robotpy_library(
     if package_requires == None:
         fail()
 
-    print(robotpy_wheel_deps)
     py_library(
         name = name,
         visibility = None,

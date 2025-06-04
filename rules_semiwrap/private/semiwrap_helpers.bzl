@@ -1,4 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_semiwrap_pip_deps//:requirements.bzl", "requirement")
 
 # PUBLISH_CASTERS_DIR = "generated/publish_casters/"
 RESOLVE_CASTERS_DIR = "generated/resolve_casters/"
@@ -93,7 +95,8 @@ def gen_pkgconf(
         module_pkg_name,
         pkg_name,
         output_file,
-        libinit_py):
+        libinit_py,
+        install_path):
     cmd = _wrapper() + " semiwrap.cmd.gen_pkgconf "
     cmd += " " + module_pkg_name + " " + pkg_name
     cmd += _location_helper(project_file)
@@ -101,7 +104,7 @@ def gen_pkgconf(
     if libinit_py:
         cmd += " --libinit-py " + libinit_py
 
-    OUT_FILE = pkg_name.replace("_", "/") + "/" + output_file
+    OUT_FILE = install_path + "/" + output_file
     native.genrule(
         name = name,
         outs = [OUT_FILE],
@@ -227,8 +230,30 @@ def gen_modinit_hpp(
         strip_include_prefix = GEN_MODINIT_HDR_DIR,
     )
 
-def make_pyi(name):
-    cmd = _wrapper() + " semiwrap.cmd.make_pyi "
+def make_pyi(name, extension_library, interface_files, init_pkgcfg, extension_package, install_path, python_deps, init_files):
+    outs = []
+
+    cmd = "$(locations " + name + ".gen_wrapper" + ") "
+    cmd += " --extension_package={}".format(extension_package)
+    cmd += " --extension_module=$(location {})".format(extension_library)
+    cmd += " --init_pkgcfg=$(location {})".format(init_pkgcfg)
+    cmd += " --output_files $(OUTS)"
+    for of in interface_files:
+        outs.append(install_path + "/" + of)
+    py_binary(
+        name = name + ".gen_wrapper",
+        srcs = ["@rules_semiwrap//rules_semiwrap/private:make_pyi_wrapper.py"],
+        main = "make_pyi_wrapper.py",
+        deps = [requirement("semiwrap")] + python_deps,
+    )
+
+    native.genrule(
+        name = name + ".gen",
+        srcs = [init_pkgcfg, extension_library] + init_files,
+        outs = outs,
+        cmd = cmd,
+        tools = [name + ".gen_wrapper"],
+    )
 
 def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps = [], local_native_libraries = []):
     temp_yml_files = []
