@@ -13,7 +13,6 @@ def main():
     parser.add_argument("--output_files", nargs="+", type=pathlib.Path)
     parser.add_argument("--remapping_args", nargs="+")
     args = parser.parse_args()
-    print(args)
 
     semiwrap_args = [args.extension_package]
 

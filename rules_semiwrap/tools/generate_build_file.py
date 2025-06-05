@@ -24,28 +24,15 @@ def _split_ns(name: str) -> T.Tuple[str, str]:
 
 def resolve_dependency(dependencies, root_package):
     header_paths = set()
-    # logging.error("-----------------")
     for d in dependencies:
-        # logging.error("---", d)
         if "native" in d:
-            # bazel_dep = f"//subprojects/{d}"
             base_lib = re.search("robotpy-native-(.*)", d)[1]
-            # # logging.error(base_lib)
             header_paths.add(f'local_native_libraries_helper("{base_lib}")')
-            # resolved.add(bazel_dep)
         elif "casters" in d:
             continue
         else:
-            print(d)
-            #     raise
-            # bazel_dep = f"//subprojects/robotpy-{d}"
             header_paths.add(f'local_native_libraries_helper("{d}")')
 
-    # logging.error(resolved)
-    # logging.error(header_paths)
-    # logging.error("-----------------")
-
-    print(header_paths)
     if header_paths:
         header_paths_str = "[\n            "
         header_paths_str += ",\n            ".join(f"{x}" for x in sorted(header_paths))
@@ -60,20 +47,12 @@ import os
 
 
 def hack_pkgconfig(depends, pkgcfgs):
-    # logging.error("))))))))))))))))))))))))))")
-    # logging.error(pkgcfgs)
 
     pkg_config_paths = os.environ.get("PKG_CONFIG_PATH", "").split(os.pathsep)
 
-    # logging.error("PACKAGE CONFIG HACKS")
     if pkgcfgs:
         for pc in pkgcfgs:
-            # logging.error(pc.parent)
-            # logging.error(pc.parent.exists())
-            # logging.error(pc.parent.absolute())
-            # logging.error(os.path.exists(pc.parent))
             pkg_config_paths.append(str(pc.parent))
-    # logging.error("/PACKAGE CONFIG HACKS")
 
     os.environ["PKG_CONFIG_PATH"] = os.pathsep.join(pkg_config_paths)
 
@@ -92,11 +71,9 @@ class _BuildPlanner:
         projectcfg = self.pyproject.project
         for name, caster_cfg in projectcfg.export_type_casters.items():
             self._process_export_type_caster(name, caster_cfg)
-            # print(caster_cfg)
-            # self.local_caster_targets[name] = f"{caster_cfg.pypackage}"
 
         self.output_buffer.writeln(
-            """load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library")"""
+            """load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library", "make_pyi", "robotpy_library")"""
         )
 
         if self.local_caster_targets:
@@ -108,7 +85,7 @@ class _BuildPlanner:
                 """load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", "resolve_casters", "run_header_gen")"""
             )
         self.output_buffer.writeln(
-            'load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_include_root", "resolve_caster_file")'
+            'load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_caster_file", "resolve_include_root")'
         )
 
         for package_name, extension in self._sorted_extension_modules():
@@ -159,7 +136,6 @@ class _BuildPlanner:
                 """
                 )
 
-            # libinit_py = extension.libinit or f"_init_{module_name}.py"
             all_extension_names.append(
                 ("/".join(package_path_elems[:-1]), extension.name, module_name)
             )
@@ -174,9 +150,6 @@ class _BuildPlanner:
             """
             )
 
-            # print(self.pyproject)
-            # print(self.pyproject.package_root)
-            # raise
             for (
                 package_name,
                 extension,
@@ -226,8 +199,6 @@ class _BuildPlanner:
             f.write(self.output_buffer.getvalue())
 
     def _process_export_type_caster(self, name: str, caster_cfg: TypeCasterConfig):
-        print("Processing export casters")
-
         dep = self.pkgcache.add_local(
             name=name,
             includes=[self.project_root / inc for inc in caster_cfg.includedir],
@@ -360,6 +331,7 @@ class _BuildPlanner:
             parent_package,
             module_name,
             package_path,
+            subpackages,
         )
 
     def _process_trampolines_str(self, ayml: AutowrapConfigYaml) -> str:
@@ -484,6 +456,34 @@ class _BuildPlanner:
                     root_package, yml, hdr, ayml, yml_input, h_input, h_root
                 )
             )
+            
+            # Detect subpackages
+            for f in ayml.functions.values():
+                if f.ignore:
+                    continue
+                if f.subpackage:
+                    subpackages.add(f.subpackage)
+                for f in f.overloads.values():
+                    if f.subpackage:
+                        subpackages.add(f.subpackage)
+
+            for e in ayml.enums.values():
+                if e.ignore:
+                    continue
+                if e.subpackage:
+                    subpackages.add(e.subpackage)
+
+            for name, ctx in ayml.classes.items():
+                if ctx.ignore:
+                    continue
+
+                if ctx.subpackage:
+                    subpackages.add(ctx.subpackage)
+
+            if ayml.templates:
+                for i, (name, tctx) in enumerate(ayml.templates.items(), start=1):
+                    if tctx.subpackage:
+                        subpackages.add(tctx.subpackage)
 
         return datfiles, module_sources, subpackages, local_hdrs
 
@@ -519,6 +519,7 @@ class _BuildPlanner:
         parent_package,
         module_name,
         package_path,
+        subpackages,
     ):
         # caster_json_file = []
         # libinit_modules = []
@@ -621,6 +622,39 @@ class _BuildPlanner:
         extra_hdrs = extra_hdrs,
         extra_srcs = extra_srcs,
         includes = includes,
+    )""")
+            print(subpackages)
+            if subpackages:
+                pyi_files = ["__init__.pyi"]
+                for sp in subpackages:
+                    pyi_files.append(sp + ".pyi")
+
+            else:
+                pyi_files = [package_name.split(".")[-1] + ".pyi"]
+
+            pyi_str = "[\n            " + ",\n            ".join(f'"{x}"' for x in pyi_files) + "\n        ]"
+
+
+            # print(subpackages)
+            # print(package_name.split("."))
+            # raise
+
+            self.output_buffer.write_trim(
+                f"""
+
+
+    make_pyi(
+        name = "{extension.name}.make_pyi",
+        extension_package = "{extension.name}.{module_name}",
+        interface_files = {pyi_str},
+        init_pkgcfgs = ["{extension.name}/_init_{module_name}.py"],
+        install_path = "{package_path}/{module_name}",
+        extension_library = "copy_{extension.name}",
+        init_packages = ["{extension.name}"],
+        python_deps = [
+            "//subprojects/robotpy-native-wpinet:import",
+            "//subprojects/robotpy-wpiutil:import",
+        ],
     )"""
             )
 
@@ -640,22 +674,7 @@ class _BuildPlanner:
             if root_package == "robotpy_apriltag":
                 root_package = "apriltag"
             header_root = f'resolve_include_root("//subprojects/robotpy-native-{root_package}", "{root_package}")'
-        # elif str(h_root).startswith(
-        #     "/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy"
-        # ):
-        # header_root = (
-        #     '"'
-        #     + str(h_root)[
-        #         len("/home/pjreiniger/git/robotpy/robotpy_monorepo/mostrobotpy/") :
-        #     ]
-        #     + '"'
-        # )
-        # local_hdrs.append(root_package / h_input.relative_to(h_root))
         else:
-            print("-----------------------")
-            print(h_input)
-            print(h_root)
-            print("-----------------------")
             header_root = f'"{h_root}"'
             local_hdrs.append(root_package / h_input.relative_to(h_root))
 
@@ -693,8 +712,6 @@ class _BuildPlanner:
             else:
                 self.output_buffer.writeln("    trampolines = [],")
 
-            #     tmpl_class_names = {tmpl_class_names},
-            #     trampolines = {trampolines},
             self.output_buffer.writeln("),")
             # ),""")
 
