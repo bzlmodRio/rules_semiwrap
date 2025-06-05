@@ -230,16 +230,27 @@ def gen_modinit_hpp(
         strip_include_prefix = GEN_MODINIT_HDR_DIR,
     )
 
-def make_pyi(name, extension_library, interface_files, init_pkgcfg, extension_package, install_path, python_deps, init_files):
+def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_package, install_path, python_deps, init_packages, local_extension_deps=[]):
     outs = []
 
+    init_file = init_packages[0] + "/__init__.py"
+
     cmd = "$(locations " + name + ".gen_wrapper" + ") "
+    cmd += " --install_path={}".format(install_path)
     cmd += " --extension_package={}".format(extension_package)
-    cmd += " --extension_module=$(location {})".format(extension_library)
-    cmd += " --init_pkgcfg=$(location {})".format(init_pkgcfg)
     cmd += " --output_files $(OUTS)"
     for of in interface_files:
         outs.append(install_path + "/" + of)
+
+    cmd += " --remapping_args "
+    for init_package in init_packages:
+        cmd += " {} $(location {})".format(init_package.replace("/", "."), init_package + "/__init__.py")
+    for init_pkgcfg in init_pkgcfgs:
+        cmd += " {} $(location {})".format(init_pkgcfg[:-3].replace("/", "."), init_pkgcfg)
+    for extension_path, extension_dep in local_extension_deps:
+        cmd += " {} $(location {})".format(extension_path.replace("/", "."), extension_dep)
+    cmd += " {} $(location {})".format(extension_package, extension_library)
+
     py_binary(
         name = name + ".gen_wrapper",
         srcs = ["@rules_semiwrap//rules_semiwrap/private:make_pyi_wrapper.py"],
@@ -248,8 +259,8 @@ def make_pyi(name, extension_library, interface_files, init_pkgcfg, extension_pa
     )
 
     native.genrule(
-        name = name + ".gen",
-        srcs = [init_pkgcfg, extension_library] + init_files,
+        name = name,
+        srcs = init_pkgcfgs + [x[1] for x in local_extension_deps] + [extension_library] + [init_package + "/__init__.py" for init_package in init_packages],
         outs = outs,
         cmd = cmd,
         tools = [name + ".gen_wrapper"],
