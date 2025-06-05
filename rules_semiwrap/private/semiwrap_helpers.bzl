@@ -230,7 +230,7 @@ def gen_modinit_hpp(
         strip_include_prefix = GEN_MODINIT_HDR_DIR,
     )
 
-def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_package, install_path, python_deps, init_packages, local_extension_deps=[]):
+def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_package, install_path, python_deps, init_packages, local_extension_deps = []):
     outs = []
 
     init_file = init_packages[0] + "/__init__.py"

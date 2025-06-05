@@ -1,10 +1,10 @@
-
 import argparse
 import pathlib
 import importlib
 import sys
 import os
 import shutil
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -16,7 +16,6 @@ def main():
     print(args)
 
     semiwrap_args = [args.extension_package]
-
 
     for output_file in args.output_files:
         semiwrap_args.extend([args.install_path / output_file.name, output_file])

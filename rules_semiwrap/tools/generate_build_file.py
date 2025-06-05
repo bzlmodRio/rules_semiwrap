@@ -158,9 +158,11 @@ class _BuildPlanner:
                 )
                 """
                 )
-            
+
             # libinit_py = extension.libinit or f"_init_{module_name}.py"
-            all_extension_names.append(("/".join(package_path_elems[:-1]), extension.name, module_name))
+            all_extension_names.append(
+                ("/".join(package_path_elems[:-1]), extension.name, module_name)
+            )
 
         self.output_buffer.writeln()
         with self.output_buffer.indent(4):
@@ -200,9 +202,10 @@ class _BuildPlanner:
             f'[\n        ":{package_path_elems[0]}.generated_data_files",\n        '
             + "\n        ".join(f'":copy_{x}",' for _, x, z in all_extension_names)
         )
-        copy_extension_text += "\n        " + "\n        ".join(f'":{x}.trampoline_hdr_files",' for _, x, z in all_extension_names)
-        copy_extension_text    += "\n    ]"
-        
+        copy_extension_text += "\n        " + "\n        ".join(
+            f'":{x}.trampoline_hdr_files",' for _, x, z in all_extension_names
+        )
+        copy_extension_text += "\n    ]"
 
         self.output_buffer.writeln()
         self.output_buffer.writeln(f"    return {copy_extension_text}")
@@ -528,7 +531,7 @@ class _BuildPlanner:
         root_package = ""
 
         subpackage_name = "/".join(package_name.split(".")[:-1])
-        
+
         package_path_elems = package_name.split(".")
         module_name = package_path_elems[-1]
 
