@@ -79,18 +79,49 @@ class BazelExtensionModule:
             else:
                 self.caster_files.append(f'"{cjf}"')
 
-    def set_depends(self, dependencies):
+    def set_depends(self, pkgcache, dependencies):
         self.header_paths = set()
-        for d in dependencies:
+
+        all_transative_deps = set()
+        python_deps = set()
+
+        print("Setting depends: ", dependencies)
+        for dep in dependencies:
+            entry = pkgcache.get(dep)
+            all_transative_deps.update(entry.requires)
+            all_transative_deps.add(dep)
+
+        self.all_transative_deps = sorted(all_transative_deps)
+
+        for d in self.all_transative_deps:
             if "native" in d:
                 base_lib = re.search("robotpy-native-(.*)", d)[1]
                 self.header_paths.add(f'local_native_libraries_helper("{base_lib}")')
             elif "casters" in d:
                 continue
             else:
-                self.header_paths.add(f'local_native_libraries_helper("{d}")')
-        print(self.header_paths)
+                parts = d.split("_")
+                print(parts[0], parts)
+                self.header_paths.add(f'local_native_libraries_helper("{parts[0]}")')
+        
+        for d in self.all_transative_deps:
+            if "casters" in d:
+                continue
+            print(d)
+
+            parts = d.split("_")
+            print(parts[0], parts)
+            if d == "ntcore":
+                local_name = "pyntcore"
+            elif "native" in d:
+                local_name = d
+            else:
+                local_name = f"robotpy-{d}"
+            python_deps.add(f"//subprojects/{local_name}:import")
         # raise
+        self.python_deps = sorted(python_deps)
+        
+        print(self.header_paths)
 
     def set_subpackages(self, subpackages):
         self.pyi_files = []
@@ -114,28 +145,6 @@ def _split_ns(name: str) -> T.Tuple[str, str]:
         name = name[idx + 2 :]
     return ns, name
 
-
-def resolve_dependency(dependencies, root_package):
-    header_paths = set()
-    for d in dependencies:
-        if "native" in d:
-            base_lib = re.search("robotpy-native-(.*)", d)[1]
-            header_paths.add(f'local_native_libraries_helper("{base_lib}")')
-        elif "casters" in d:
-            continue
-        else:
-            header_paths.add(f'local_native_libraries_helper("{d}")')
-
-    if header_paths:
-        header_paths_str = "[\n            "
-        header_paths_str += ",\n            ".join(f"{x}" for x in sorted(header_paths))
-        header_paths_str += ",\n        ]"
-    else:
-        header_paths_str = "[]"
-
-    return header_paths_str
-
-
 import os
 
 
@@ -152,7 +161,6 @@ def hack_pkgconfig(depends, pkgcfgs):
 
 class _BuildPlanner:
     def __init__(self, project_root: pathlib.Path, pkgcfgs: T.List[pathlib.Path]):
-        self.output_buffer = RenderBuffer()
         self.project_root = project_root
         self.pyproject = PyProject(project_root / "pyproject.toml")
         self.pkgcache = PkgconfCache()
@@ -173,109 +181,6 @@ class _BuildPlanner:
             except Exception as e:
                 raise Exception(f"{package_name} failed") from e
 
-        for name, caster_install_path in self.local_caster_targets.items():
-            self.output_buffer.writeln()
-            self.output_buffer.write_trim(
-                f"""
-            def publish_library_casters(typecasters_srcs):
-                publish_casters(
-                    name = "publish_casters",
-                    caster_name = "{name}",
-                    output_json = "{caster_install_path}/{name}.pybind11.json",
-                    output_pc = "{caster_install_path}/{name}.pc",
-                    project_config = "pyproject.toml",
-                    typecasters_srcs = typecasters_srcs,
-                )
-            """
-            )
-
-        self.output_buffer.writeln()
-        self.output_buffer.write_trim(
-            f"""
-        def get_generated_data_files():
-        """
-        )
-        all_extension_names = []
-        for package_name, extension in self.pyproject.project.extension_modules.items():
-            if extension.ignore:
-                continue
-
-            package_path_elems = package_name.split(".")
-            package_path = pathlib.Path(*package_path_elems[:-1])
-            module_name = package_path_elems[-1]
-
-            with self.output_buffer.indent(4):
-                self.output_buffer.write_trim(
-                    f"""
-                copy_extension_library(
-                    name = "copy_{extension.name}",
-                    extension = "{module_name}",
-                    output_directory = "{package_path}/",
-                )
-                """
-                )
-
-            all_extension_names.append(
-                ("/".join(package_path_elems[:-1]), extension.name, module_name)
-            )
-
-        self.output_buffer.writeln()
-        with self.output_buffer.indent(4):
-            self.output_buffer.write_trim(
-                f"""
-                native.filegroup(
-                    name = "{package_path_elems[0]}.generated_data_files",
-                    srcs = [
-            """
-            )
-
-            for (
-                package_name,
-                extension,
-            ) in self.pyproject.project.extension_modules.items():
-                if extension.ignore:
-                    continue
-                package_path_elems = package_name.split(".")
-                package_path = pathlib.Path(*package_path_elems[:-1])
-                module_name = package_path_elems[-1]
-                self.output_buffer.writeln(
-                    f'        "{package_path}/{extension.name}.pc",'
-                )
-            for caster_name, caster_install_path in self.local_caster_targets.items():
-                self.output_buffer.writeln(
-                    f'        "{caster_install_path}/{caster_name}.pc",'
-                )
-                self.output_buffer.writeln(
-                    f'        "{caster_install_path}/{caster_name}.pybind11.json",'
-                )
-            self.output_buffer.writeln("    ],\n)")
-
-        copy_extension_text = (
-            f'[\n        ":{package_path_elems[0]}.generated_data_files",\n        '
-            + "\n        ".join(f'":copy_{x}",' for _, x, z in all_extension_names)
-        )
-        copy_extension_text += "\n        " + "\n        ".join(
-            f'":{x}.trampoline_hdr_files",' for _, x, z in all_extension_names
-        )
-        copy_extension_text += "\n    ]"
-
-        self.output_buffer.writeln()
-        self.output_buffer.writeln(f"    return {copy_extension_text}")
-
-        libinit_files_text = (
-            "[\n        "
-            + "\n        ".join(
-                f'"{x}/_init_{z}.py",' for (x, y, z) in all_extension_names
-            )
-            + "\n    ]"
-        )
-        self.output_buffer.writeln()
-        self.output_buffer.writeln(
-            f"""def libinit_files():\n    return {libinit_files_text}"""
-        )
-
-        # extension_modules = [BazelExtensionModule(name = "wpiutil")]
-
         print(os.getcwd())
         import jinja2
         from jinja2 import Environment, PackageLoader, select_autoescape
@@ -286,26 +191,41 @@ class _BuildPlanner:
         #     loader=PackageLoader("tools"),
         #     autoescape=select_autoescape()
         # )/home/pjreiniger/git/robotpy/robotpy_monorepo/rules_semiwrap/rules_semiwrap/tools/generated_build_info.bzl.jinja2
-        template = Environment(loader=BaseLoader).from_string(BUILD_FILE_TEMPLATE)
+        import json
+        def double_quotes(data):
+            print("HELLO", data, type(data))
+            if data:
+                return json.dumps(data)
+            return None
+        
+        env = Environment(loader=BaseLoader)
+        env.filters['double_quotes'] = double_quotes
+        template = env.from_string(BUILD_FILE_TEMPLATE)
 
         print("----")
         print(self.pyproject.root)
         print(self.pyproject.package_root)
         print(self.pyproject)
         print(type(self.pyproject))
+
+        all_python_deps = set()
+        for bazel_extension_module in self.extension_modules:
+            all_python_deps.update(bazel_extension_module.python_deps)
+
         with open(self.pyproject.root / "pyproject.toml", "rb") as fp:
             raw_config = tomli.load(fp)
-        print(raw_config)
-
-        print("----")
-        for key in raw_config:
-            print(key, raw_config[key])
         
         with open(output_file, "w") as f:
+            print()
+            top_level_name = raw_config["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"]
+            assert len(top_level_name) == 1
+            top_level_name = top_level_name[0]
+            
             f.write(template.render(
                 extension_modules=self.extension_modules, 
+                all_python_deps=sorted(all_python_deps),
                 local_caster_targets=self.local_caster_targets,
-                top_level_name = raw_config["project"]["name"].replace("robotpy-", ""),
+                top_level_name = top_level_name,
                 raw_project_config = raw_config["project"],
                 # project_name = raw_config["project"]["name"],
                 # summary = raw_config["project"]["description"],
@@ -355,7 +275,6 @@ class _BuildPlanner:
     ):
         bazel_extension_module = BazelExtensionModule(package_name, extension)
         self.extension_modules.append(bazel_extension_module)
-        self._write_extension_function_header(extension)
 
         package_path_elems = package_name.split(".")
         parent_package = ".".join(package_path_elems[:-1])
@@ -367,11 +286,9 @@ class _BuildPlanner:
         package_init_py = self.pyproject.package_root / package_path / "__init__.py"
 
         depends = self.pyproject.get_extension_deps(extension)
-
-        bazel_extension_module.set_depends(depends)
-        bazel_header_paths = resolve_dependency(depends, package_path_elems[0])
-
         hack_pkgconfig(depends, self.pkgcfgs)
+
+        bazel_extension_module.set_depends(self.pkgcache, depends)
 
         # Search path for wrapping is dictated by package_path and wraps
         search_path, include_directories_uniq, caster_json_file, libinit_modules = (
@@ -444,20 +361,6 @@ class _BuildPlanner:
         bazel_extension_module.libinit_modules = libinit_modules
         bazel_extension_module.libinit_py = libinit_py
         bazel_extension_module.set_caster_json_file(caster_json_file)
-
-        self._write_extension_function_footer(
-            extension,
-            caster_json_file,
-            bazel_header_paths,
-            local_hdrs,
-            libinit_modules,
-            libinit_py,
-            package_name,
-            parent_package,
-            module_name,
-            package_path,
-            subpackages,
-        )
 
     def _process_trampolines_str(self, ayml: AutowrapConfigYaml) -> str:
         trampolines = []
@@ -580,12 +483,6 @@ class _BuildPlanner:
             bazel_extension_module.add_header(
                 root_package, yml, hdr, ayml, yml_input, h_input, h_root
             )
-
-            local_hdrs.extend(
-                self._write_header_gen_struct(
-                    root_package, yml, hdr, ayml, yml_input, h_input, h_root
-                )
-            )
             
             # Detect subpackages
             for f in ayml.functions.values():
@@ -629,223 +526,6 @@ class _BuildPlanner:
         raise FileNotFoundError(
             f"cannot locate {phdr} in {', '.join(map(str, search_path))}"
         )
-
-    def _write_extension_function_header(self, extension):
-        self.output_buffer.writeln()
-        self.output_buffer.writeln(
-            f"""def {extension.name}_extension(entry_point, deps, header_to_dat_deps, extension_name = None, extra_hdrs = [], extra_srcs = [], includes = []):"""
-        )
-        self.output_buffer.writeln(f"    {extension.name.upper()}_HEADER_GEN = [")
-
-    def _write_extension_function_footer(
-        self,
-        extension,
-        caster_json_file,
-        bazel_header_paths,
-        local_hdrs,
-        libinit_modules,
-        libinit_py,
-        package_name,
-        parent_package,
-        module_name,
-        package_path,
-        subpackages,
-    ):
-        # caster_json_file = []
-        # libinit_modules = []
-        # package_path = ""
-        # parent_package = ""
-        # libinit = ""
-        # package_name = ""
-        # module_name = ""
-        extra_generation_hdrs_str = ""
-        root_package = ""
-
-        subpackage_name = "/".join(package_name.split(".")[:-1])
-
-        package_path_elems = package_name.split(".")
-        module_name = package_path_elems[-1]
-
-        libinit_modules_str = "[" + ", ".join(f'"{x}"' for x in libinit_modules) + "]"
-        if local_hdrs:
-            extra_generation_hdrs_str = (
-                " + [" + ",".join(f'"{x}"' for x in local_hdrs) + "]"
-            )
-
-        caster_files_str = ""
-        caster_deps_str = ""
-        # if caster_json_file:
-        for cjf in caster_json_file:
-            if cjf.startswith("resolve_caster_file"):
-                caster_deps_str += cjf + ", "
-            else:
-                caster_files_str += f'"{cjf}"'
-
-        if caster_files_str:
-            caster_files_str = f"\n        caster_files = [{caster_files_str}],"
-        if caster_deps_str:
-            caster_deps_str = f"\n        caster_deps = [{caster_deps_str[:-2]}],"
-
-        with self.output_buffer.indent(4):
-            self.output_buffer.write_trim(
-                f"""
-    ]
-
-    resolve_casters(
-        name = "{extension.name}.resolve_casters",{caster_files_str}{caster_deps_str}
-        casters_pkl_file = "{extension.name}.casters.pkl",
-        dep_file = "{extension.name}.casters.d",
-    )
-
-    gen_libinit(
-        name = "{extension.name}.gen_lib_init",
-        output_file = "{package_path}/{libinit_py}",
-        modules = {libinit_modules_str},
-    )
-
-    gen_pkgconf(
-        name = "{extension.name}.gen_pkgconf",
-        libinit_py = "{parent_package}.{libinit_py[:-3]}",
-        module_pkg_name = "{package_name}",
-        output_file = "{extension.name}.pc",
-        pkg_name = "{extension.name}",
-        install_path = "{package_path}",
-        project_file = "pyproject.toml",
-    )
-
-    gen_modinit_hpp(
-        name = "{extension.name}.gen_modinit_hpp",
-        input_dats = [x.class_name for x in {extension.name.upper()}_HEADER_GEN],
-        libname = "{module_name}",
-        output_file = "semiwrap_init.{package_name}.hpp",
-    )
-
-    run_header_gen(
-        name = "{extension.name}",
-        casters_pickle = "{extension.name}.casters.pkl",
-        header_gen_config = {extension.name.upper()}_HEADER_GEN,
-        trampoline_subpath = "{subpackage_name}",
-        deps = header_to_dat_deps{extra_generation_hdrs_str},
-        local_native_libraries = {bazel_header_paths},
-    )
-
-    native.filegroup(
-        name = "{extension.name}.generated_files",
-        srcs = [
-            "{extension.name}.gen_modinit_hpp.gen",
-            "{extension.name}.header_gen_files",
-            "{extension.name}.gen_pkgconf",
-            "{extension.name}.gen_lib_init",
-        ],
-        tags = ["manual"],
-    )
-    create_pybind_library(
-        name = "{extension.name}",
-        entry_point = entry_point,
-        extension_name = extension_name,
-        generated_srcs = [":{extension.name}.generated_srcs"],
-        semiwrap_header = [":{extension.name}.gen_modinit_hpp"],
-        deps = deps + [
-            ":{extension.name}.tmpl_hdrs",
-            ":{extension.name}.trampoline_hdrs",
-        ],
-        extra_hdrs = extra_hdrs,
-        extra_srcs = extra_srcs,
-        includes = includes,
-    )""")
-            print(subpackages)
-            if subpackages:
-                pyi_files = ["__init__.pyi"]
-                for sp in subpackages:
-                    pyi_files.append(sp + ".pyi")
-
-            else:
-                pyi_files = [package_name.split(".")[-1] + ".pyi"]
-
-            pyi_str = "[\n            " + ",\n            ".join(f'"{x}"' for x in pyi_files) + "\n        ]"
-
-
-            # print(subpackages)
-            # print(package_name.split("."))
-            # raise
-
-            self.output_buffer.write_trim(
-                f"""
-
-
-    make_pyi(
-        name = "{extension.name}.make_pyi",
-        extension_package = "{extension.name}.{module_name}",
-        interface_files = {pyi_str},
-        init_pkgcfgs = ["{extension.name}/_init_{module_name}.py"],
-        install_path = "{package_path}/{module_name}",
-        extension_library = "copy_{extension.name}",
-        init_packages = ["{extension.name}"],
-        python_deps = [
-            "//subprojects/robotpy-native-wpinet:import",
-            "//subprojects/robotpy-wpiutil:import",
-        ],
-    )"""
-            )
-
-    def _write_header_gen_struct(
-        self, root_package, yml, hdr, ayml, yml_input, h_input, h_root
-    ):
-        tmpl_class_names = self._process_tmpl_str(yml, ayml)
-        trampolines = self._process_trampolines_str(ayml)
-
-        local_hdrs = []
-
-        # TODO hack
-        if root_package == "hal":
-            root_package = "wpihal"
-
-        if "site-packages" in str(h_root):
-            if root_package == "robotpy_apriltag":
-                root_package = "apriltag"
-            header_root = f'resolve_include_root("//subprojects/robotpy-native-{root_package}", "{root_package}")'
-        else:
-            header_root = f'"{h_root}"'
-            local_hdrs.append(root_package / h_input.relative_to(h_root))
-
-        header_suffix = h_input.relative_to(h_root)
-
-        with self.output_buffer.indent(8):
-            self.output_buffer.write_trim(
-                f"""
-            struct(
-                class_name = "{yml}",
-                yml_file = "{yml_input}",
-                header_root = {header_root},
-                header_file = {header_root} + "/{header_suffix}",
-            """
-            )
-            if tmpl_class_names:
-                self.output_buffer.writeln("    tmpl_class_names = [")
-                with self.output_buffer.indent(4):
-                    for tmpl in tmpl_class_names:
-                        with self.output_buffer.indent(4):
-                            self.output_buffer.writeln(f'("{tmpl[0]}", "{tmpl[1]}"),')
-                self.output_buffer.writeln("    ],")
-            else:
-                self.output_buffer.writeln("    tmpl_class_names = [],")
-
-            if trampolines:
-                self.output_buffer.writeln("    trampolines = [")
-                with self.output_buffer.indent(4):
-                    for trampoline in trampolines:
-                        with self.output_buffer.indent(4):
-                            self.output_buffer.writeln(
-                                f'("{trampoline[0]}", "{trampoline[1]}"),'
-                            )
-                self.output_buffer.writeln("    ],")
-            else:
-                self.output_buffer.writeln("    trampolines = [],")
-
-            self.output_buffer.writeln("),")
-            # ),""")
-
-        return local_hdrs
 
 
 def generate_build_info(
@@ -943,7 +623,7 @@ def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps, e
         casters_pickle = "{{extension_module.name}}.casters.pkl",
         header_gen_config = {{extension_module.name|upper}}_HEADER_GEN,
         trampoline_subpath = "{{extension_module.subpackage_name}}",
-        deps = header_to_dat_deps{% if extension_module.local_headers %} + [{% for h in extension_module.local_headers %}"{{ h }}"{%endfor%}]{% endif %},
+        deps = header_to_dat_deps{% if extension_module.local_headers %} + [{% for h in extension_module.local_headers %}"{{ h }}{% if not loop.last %}, {% endif %}"{%endfor%}]{% endif %},
         local_native_libraries = [
         {%- for header_path in extension_module.header_paths|sort %}
             {{header_path}},
@@ -1002,13 +682,16 @@ def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps, e
         {%- endif %}
         install_path = "{{extension_module.pyi_install_path}}",
         python_deps = [
-            "//subprojects/robotpy-native-wpinet:import",
-            "//subprojects/robotpy-wpiutil:import",
+        {%- for d in extension_module.python_deps %}
+            "{{d}}",
+        {%- endfor %}
         ],
         {%- if extension_modules|length > 1 %}
         local_extension_deps = [
         {%- for em in extension_modules %}
+        {%- if em.name != extension_module.name %}
             ("{{em.subpackage_name}}/{{em.module_name}}", "copy_{{em.name}}"),
+        {%- endif %}
         {%- endfor %}
         ],
         {%- endif %}
@@ -1083,9 +766,13 @@ def define_pybind_library(name, version):
     robotpy_library(
         name = name,
         srcs = native.glob(["{{top_level_name}}/**/*.py"]) + libinit_files(),
-        data = get_generated_data_files() + ["{{top_level_name}}.extra_pkg_files"] + [":pyi_files"],
+        data = get_generated_data_files() + ["{{top_level_name}}.extra_pkg_files", ":pyi_files"],
         imports = ["."],
-        robotpy_wheel_deps = ["//subprojects/robotpy-native-wpiutil:import"],
+        robotpy_wheel_deps = [
+            {%- for d in all_python_deps %}
+            "{{d}}",
+            {%- endfor %}
+        ],
         strip_path_prefixes = ["subprojects/{{raw_project_config.name}}"],
         version = version,
         visibility = ["//visibility:public"],
@@ -1101,9 +788,9 @@ def define_pybind_library(name, version):
         },
         package_name = "{{raw_project_config.name}}",
         package_summary = "{{raw_project_config.description}}",
-        package_project_urls = {{raw_project_config.urls}},
+        package_project_urls = {{raw_project_config.urls | double_quotes}},
         package_author_email = "RobotPy Development Team <robotpy@googlegroups.com>",
-        package_requires = {{raw_project_config.dependencies}},
+        package_requires = {{raw_project_config.dependencies | double_quotes}},
     )
 
 """

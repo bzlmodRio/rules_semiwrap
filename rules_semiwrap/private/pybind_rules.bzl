@@ -91,8 +91,8 @@ def robotpy_library(
 
     if package_summary == None:
         fail()
-    if package_project_urls == None:
-        fail()
+    # if package_project_urls == None:
+    #     fail()
     if package_author_email == None:
         fail()
     if package_author_email == None:
