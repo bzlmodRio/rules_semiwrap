@@ -104,7 +104,10 @@ class BazelExtensionModule:
                 continue
             else:
                 parts = d.split("_")
-                self.header_paths.add(f'local_native_libraries_helper("{parts[0]}")')
+                if parts[0] == "wpilog":
+                    self.header_paths.add(f'local_native_libraries_helper("datalog")')
+                else:
+                    self.header_paths.add(f'local_native_libraries_helper("{parts[0]}")')
         
         for d in self.all_transative_deps:
             if "casters" in d:
