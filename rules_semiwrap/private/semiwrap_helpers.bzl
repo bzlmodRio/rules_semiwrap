@@ -266,24 +266,18 @@ def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_p
         tools = [name + ".gen_wrapper"],
     )
 
-def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, deps = [], generation_includes = [], generation_defines = [], header_to_dat_deps = [], local_native_libraries = []):
+def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, deps = [], generation_includes = [], generation_defines = [], local_native_libraries = []):
     temp_yml_files = []
 
     generation_includes = list(generation_includes)
-    header_to_dat_deps = list(header_to_dat_deps)
+    header_to_dat_deps = []
 
-    if header_to_dat_deps:
-        fail()
-
-    if generation_includes and not (("wpimath" not in name) or ("cscore" not in name)):
+    if generation_includes and "cscore" not in name:
         fail()
 
     for project_label, include_subpackage in local_native_libraries:
         header_to_dat_deps.append(project_label)
         generation_includes.append(_local_include_root(project_label, include_subpackage))
-
-    # print(generation_includes)
-    # print(header_to_dat_deps)
 
     for header_gen in header_gen_config:
         temp_yml_files.append(header_gen.yml_file)
