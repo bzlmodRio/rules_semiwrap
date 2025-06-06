@@ -54,6 +54,8 @@ class BazelExtensionModule:
         if "site-packages" in str(h_root):
             if root_package == "robotpy_apriltag":
                 root_package = "apriltag"
+            if root_package == "wpilog":
+                root_package = "datalog"
             header_root = f'resolve_include_root("//subprojects/robotpy-native-{root_package}", "{root_package}")'
         else:
             header_root = f'"{h_root}"'
@@ -308,6 +310,16 @@ class _BuildPlanner:
             search_path.append(
                 pathlib.Path(
                     "bazel-mostrobotpy/external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cameraserver_cameraserver-cpp_headers"
+                )
+            )
+            search_path.append(
+                pathlib.Path(
+                    "external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cscore_cscore-cpp_headers"
+                )
+            )
+            search_path.append(
+                pathlib.Path(
+                    "external/bzlmodrio-allwpilib~~setup_bzlmodrio_allwpilib_cpp_dependencies~bazelrio_edu_wpi_first_cameraserver_cameraserver-cpp_headers"
                 )
             )
 
@@ -760,7 +772,7 @@ def libinit_files():
 def define_pybind_library(name, version, extra_entry_points = {}):
     native.filegroup(
         name = "{{top_level_name}}.extra_pkg_files",
-        srcs = native.glob(["{{top_level_name}}/**"], exclude = ["{{top_level_name}}/**/*.py"]),
+        srcs = native.glob(["{{top_level_name}}/**"], exclude = ["{{top_level_name}}/**/*.py"], allow_empty=True),
         tags = ["manual"],
     )
 
