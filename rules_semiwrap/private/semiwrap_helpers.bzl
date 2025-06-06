@@ -14,10 +14,10 @@ def _location_helper(filename):
     return " $(locations " + filename + ")"
 
 def _wrapper():
-    return "$(locations @rules_semiwrap//:wrapper) "
+    return "$(locations @rules_semiwrap//rules_semiwrap/private:wrapper) "
 
 def _wrapper_dep():
-    return ["@rules_semiwrap//:wrapper"]
+    return ["@rules_semiwrap//rules_semiwrap/private:wrapper"]
 
 def _local_include_root(project_import, include_subpackage):
     return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"

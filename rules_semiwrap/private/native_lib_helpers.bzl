@@ -3,7 +3,7 @@ load("@rules_pycross//pycross/private:wheel_library.bzl", "pycross_wheel_library
 load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
 load("//rules_semiwrap/private:copy_native_file.bzl", "copy_native_file")
-load("//rules_semiwrap/private:hatch_nativelib_helpers.bzl", "gen_libinit")
+load("//rules_semiwrap/private:hatch_nativelib_helpers.bzl", "generate_native_lib_files")
 
 def create_native_library(
         name,
@@ -12,23 +12,26 @@ def create_native_library(
         headers_external_repositories,
         package_name,
         shared_library,
-        module_dependencies,
         strip_pkg_prefix,
         version,
         deps = [],
+        pc_dep_files = [],
+        pc_dep_deps = [],
         entry_points = {},
         package_summary = None,
         package_project_urls = None,
         package_author_email = None,
-        package_requires = None,
         visibility = ["//visibility:public"]):
     if deps:
         fail("Don't use deps directly")
 
+    # if module_dependencies:
+    #     fail()
+
     if package_summary == None:
         fail()
-    if package_requires == None:
-        fail()
+    # if package_requires == None:
+    #     fail()
 
     copy_to_directory(
         name = "{}.copy_headers".format(name),
@@ -40,31 +43,38 @@ def create_native_library(
         verbose = False,
     )
 
-    gen_libinit(
-        name = "{}.gen_lib_init".format(name),
-        lib_name = lib_name,
-        modules = module_dependencies,
-        output_file = "native/{}/_init_{}.py".format(lib_name, package_name.replace("-", "_")),
+    libinit_file = "native/{}/_init_{}.py".format(lib_name, package_name.replace("-", "_"))
+    pc_file = "native/{}/{}.pc".format(lib_name, package_name)
+
+    generate_native_lib_files(
+        name = "{}.generate_native_files".format(name),
+        pc_dep_files = pc_dep_files,
+        pc_dep_deps = pc_dep_deps,
+        libinit_file = libinit_file,
+        pc_file = pc_file,
+        pyproject_toml="pyproject.toml",
     )
 
-    native.genrule(
-        name = "{}.gen_pc".format(name),
-        outs = ["native/{}/{}.pc".format(lib_name, package_name)],
-        srcs = [":pyproject.toml"],
-        cmd = "$(locations @rules_semiwrap//rules_semiwrap/private:render_native_pc) --output_file=$(OUTS) --project_file=$(location :pyproject.toml)",
-        tools = ["@rules_semiwrap//rules_semiwrap/private:render_native_pc"],
-        visibility = ["//visibility:public"],
-    )
+    # TODO hacked
+    hal_lib_name = lib_name
+    if lib_name == "wpihal":
+        hal_lib_name = "wpiHal"
+    elif lib_name == "wpilib":
+        hal_lib_name = "wpilibc"
+    elif lib_name == "romi":
+        hal_lib_name = "romiVendordep"
+    elif lib_name == "xrp":
+        hal_lib_name = "xrpVendordep"
 
     copy_native_file(
-        name = lib_name,
+        name = hal_lib_name,
         base_path = "native/{}/".format(lib_name),
         library = shared_library,
     )
     py_library(
         name = package_name,
-        srcs = ["{}.gen_lib_init".format(name)],
-        data = [":{}.copy_lib".format(lib_name), "{}.copy_headers".format(name), "{}.gen_pc".format(name)],
+        srcs = [libinit_file],
+        data = [":{}.copy_lib".format(hal_lib_name), "{}.copy_headers".format(name), pc_file],
         imports = ["."],
         visibility = visibility,
     )

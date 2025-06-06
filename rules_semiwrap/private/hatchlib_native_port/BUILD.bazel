@@ -1,11 +1,8 @@
-load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_semiwrap_pip_deps//:requirements.bzl", "requirement")
 
-exports_files(["make_pyi_wrapper.py"])
-
 py_binary(
-    name = "wrapper",
-    srcs = ["wrapper.py"],
+    name = "generate_native_lib_files",
+    srcs = glob(["*.py"]),
     visibility = ["//visibility:public"],
     deps = [requirement("semiwrap")],
 )

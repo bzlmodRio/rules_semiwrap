@@ -11,15 +11,3 @@ alias(
     actual = "//rules_semiwrap/semiwrap_headers:semiwrap_headers",
     visibility = ["//visibility:public"],
 )
-
-alias(
-    name = "wrapper",
-    actual = "//rules_semiwrap/private:wrapper",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "render_native_libinit",
-    actual = "//rules_semiwrap/private:render_native_libinit",
-    visibility = ["//visibility:public"],
-)

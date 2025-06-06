@@ -1,13 +1,13 @@
-def gen_libinit(name, lib_name, output_file, modules):
-    cmd = "$(locations @rules_semiwrap//rules_semiwrap/private:render_native_libinit) "
-    cmd += "  " + lib_name
+def generate_native_lib_files(name, pyproject_toml, libinit_file, pc_file, pc_dep_files, pc_dep_deps):
+    cmd = "$(locations @rules_semiwrap//rules_semiwrap/private/hatchlib_native_port:generate_native_lib_files) "
+    cmd += "  $(location " + pyproject_toml + ")"
     cmd += " $(OUTS) "
-    for module in modules:
-        cmd += " " + module
+    cmd += " ".join(pc_dep_files)
 
     native.genrule(
         name = name,
-        outs = [output_file],
+        srcs = [pyproject_toml] + pc_dep_deps,
+        outs = [libinit_file, pc_file],
         cmd = cmd,
-        tools = ["@rules_semiwrap//rules_semiwrap/private:render_native_libinit"],
+        tools = ["@rules_semiwrap//rules_semiwrap/private/hatchlib_native_port:generate_native_lib_files"],
     )
