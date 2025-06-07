@@ -21,6 +21,7 @@ def create_native_library(
         package_summary = None,
         package_project_urls = None,
         package_author_email = None,
+        package_requires = None,
         visibility = ["//visibility:public"]):
     if deps:
         fail("Don't use deps directly")

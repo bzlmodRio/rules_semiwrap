@@ -1,0 +1,70 @@
+
+import jinja2
+from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, BaseLoader
+import pathlib
+import tomli
+import json
+import argparse
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pyproject", type=pathlib.Path)
+    parser.add_argument("--output_file", type=pathlib.Path)
+    args = parser.parse_args()
+
+    def double_quotes(data):
+        if data:
+            return json.dumps(data)
+        return None
+
+    def get_subpath(library):
+        return library.replace("robotpy-native-", "")
+
+    env = Environment(loader=BaseLoader)
+    env.filters['double_quotes'] = double_quotes
+    env.filters['get_subpath'] = get_subpath
+    template = env.from_string(BUILD_FILE_TEMPLATE)
+    
+    with open(args.pyproject, "rb") as fp:
+        raw_config = tomli.load(fp)
+    
+    with open(args.output_file, 'w') as f:
+        f.write(template.render(
+            raw_project_config = raw_config["project"],
+            nativelib_config = raw_config["tool"]["hatch"]["build"]["hooks"]["nativelib"]
+        ))
+
+
+BUILD_FILE_TEMPLATE = """load("@rules_semiwrap//:defs.bzl", "create_native_library")
+
+def define_library(name, headers, headers_external_repositories, shared_library, version):
+    create_native_library(
+        name = name,
+        package_name = "{{raw_project_config.name}}",
+        entry_points = {"pkg_config": ["{{nativelib_config.pcfile[0].name}} = native.{{nativelib_config.pcfile[0].name}}"]},
+        headers = headers,
+        headers_external_repositories = headers_external_repositories,
+        shared_library = shared_library,
+        lib_name = "{{nativelib_config.pcfile[0].name}}",
+        pc_dep_deps = [
+        {%- for dep in nativelib_config.pcfile[0].requires | sort %}
+            "//subprojects/{{dep}}:import",
+        {%- endfor %}
+        ],
+        pc_dep_files = [
+        {%- for dep in nativelib_config.pcfile[0].requires | sort %}
+            "$(location //subprojects/{{dep}}:import)/site-packages/native/{{dep | get_subpath}}/{{dep}}.pc",
+        {%- endfor %}
+        ],
+        package_requires = {{raw_project_config.dependencies|double_quotes}},
+        package_summary = "{{raw_project_config.description}}",
+        strip_pkg_prefix = ["subprojects/{{raw_project_config.name}}"],
+        version = version,
+    )
+
+"""
+
+
+if __name__ == "__main__":
+    main()
