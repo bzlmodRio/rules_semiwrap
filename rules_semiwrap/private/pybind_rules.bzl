@@ -174,10 +174,9 @@ def robotpy_library(
 
     native.alias(
         name = "import",
-        actual = name,
-        # actual = select({
-        #     "@bazel_tools//src/conditions:windows": name,
-        #     "//conditions:default": "_import",
-        # }),
+        actual = select({
+            "@bazel_tools//src/conditions:windows": name,
+            "//conditions:default": "_import",
+        }),
         visibility = visibility,
     )
