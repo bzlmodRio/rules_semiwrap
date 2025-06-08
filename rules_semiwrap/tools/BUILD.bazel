@@ -6,7 +6,6 @@ py_binary(
     srcs = ["generate_build_file.py"],
     visibility = ["//visibility:public"],
     deps = [requirement("semiwrap"), requirement("jinja2")],
-    data = ["generated_build_info.bzl.jinja2"]
 )
 
 
@@ -15,5 +14,4 @@ py_binary(
     srcs = ["generate_nativelib_build_file.py"],
     visibility = ["//visibility:public"],
     deps = [requirement("semiwrap"), requirement("jinja2")],
-    data = ["generated_build_info.bzl.jinja2"]
 )
