@@ -76,6 +76,11 @@ def define_library(name, headers, headers_external_repositories, shared_library,
         hdrs = [":header_files"],
         includes = ["header_files/native/{{nativelib_config.pcfile[0].name}}/include"],
         visibility = ["//visibility:public"],
+        deps = [
+        {%- for dep in nativelib_config.pcfile[0].requires | sort %}
+            "//subprojects/{{dep}}:{{dep | get_subpath}}",
+        {%- endfor %}
+        ],
     )
 
 """

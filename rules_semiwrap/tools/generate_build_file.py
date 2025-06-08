@@ -9,6 +9,9 @@ import re
 import argparse
 import logging
 import tomli
+import json
+import jinja2
+from jinja2 import Environment, BaseLoader
 
 import toposort
 
@@ -191,16 +194,6 @@ class _BuildPlanner:
             except Exception as e:
                 raise Exception(f"{package_name} failed") from e
 
-        import jinja2
-        from jinja2 import Environment, PackageLoader, select_autoescape
-        from jinja2 import Environment, BaseLoader
-        # templateLoader = jinja2.FileSystemLoader(searchpath="external/rules_semiwrap~/rules_semiwrap/tools")
-        # templateEnv = jinja2.Environment(loader=templateLoader)
-        # env = Environment(
-        #     loader=PackageLoader("tools"),
-        #     autoescape=select_autoescape()
-        # )/home/pjreiniger/git/robotpy/robotpy_monorepo/rules_semiwrap/rules_semiwrap/tools/generated_build_info.bzl.jinja2
-        import json
         def double_quotes(data):
             if data:
                 return json.dumps(data)
@@ -390,21 +383,6 @@ class _BuildPlanner:
             trampolines.append((name, f"{cls_ns}__{cls_name}.hpp"))
 
         return trampolines
-
-    def _process_tmpl_str(self, yml: str, ayml: AutowrapConfigYaml) -> str:
-        templates = []
-
-        for i, (name, tctx) in enumerate(ayml.templates.items(), start=1):
-            templates.append((f"{yml}_tmpl{i}", f"{name}"))
-
-        # output = "["
-        # if templates:
-        #     output += "\n                            "
-        #     output += ",\n                            ".join(f'("{t[0]}", "{t[1]}")' for t in templates)
-        #     output += ",\n                        "
-
-        # output += "]"
-        return templates
 
     def _locate_type_caster_json(
         self,
