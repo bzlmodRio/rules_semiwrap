@@ -1,13 +1,24 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_python//python:pip.bzl", "whl_filegroup")
+load("@rules_semiwrap_pip_deps//:requirements.bzl", "whl_requirement")
+
 exports_files(["requirements.txt"])
 
-alias(
-    name = "semiwrap_casters",
-    actual = "//rules_semiwrap/semiwrap_headers:semiwrap_casters",
+whl_filegroup(
+    name = "semiwrap_header_files",
+    pattern = "semiwrap/include",
+    whl = whl_requirement("semiwrap"),
+)
+
+cc_library(
+    name = "semiwrap_headers",
+    hdrs = [":semiwrap_header_files"],
+    includes = ["semiwrap_header_files/semiwrap/include"],
     visibility = ["//visibility:public"],
 )
 
 alias(
-    name = "semiwrap_headers",
-    actual = "//rules_semiwrap/semiwrap_headers:semiwrap_headers",
+    name = "semiwrap_casters",
+    actual = "//rules_semiwrap/semiwrap_headers:semiwrap_casters",
     visibility = ["//visibility:public"],
 )

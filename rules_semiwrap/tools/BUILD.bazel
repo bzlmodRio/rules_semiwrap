@@ -5,13 +5,18 @@ py_binary(
     name = "generate_build_file",
     srcs = ["generate_build_file.py"],
     visibility = ["//visibility:public"],
-    deps = [requirement("semiwrap"), requirement("jinja2")],
+    deps = [
+        requirement("semiwrap"),
+        requirement("jinja2"),
+    ],
 )
-
 
 py_binary(
     name = "generate_nativelib_build_file",
     srcs = ["generate_nativelib_build_file.py"],
     visibility = ["//visibility:public"],
-    deps = [requirement("semiwrap"), requirement("jinja2")],
+    deps = [
+        requirement("semiwrap"),
+        requirement("jinja2"),
+    ],
 )

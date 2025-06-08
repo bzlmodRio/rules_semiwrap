@@ -31,6 +31,7 @@ def create_native_library(
 
     if package_summary == None:
         fail()
+
     # if package_requires == None:
     #     fail()
 
@@ -53,7 +54,7 @@ def create_native_library(
         pc_dep_deps = pc_dep_deps,
         libinit_file = libinit_file,
         pc_file = pc_file,
-        pyproject_toml="pyproject.toml",
+        pyproject_toml = "pyproject.toml",
     )
 
     # TODO hacked
