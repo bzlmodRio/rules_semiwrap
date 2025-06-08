@@ -536,9 +536,10 @@ def main():
     parser.add_argument("--pkgcfgs", type=pathlib.Path, nargs="+")
     args = parser.parse_args()
 
-    for pc in args.pkgcfgs:
-        if not os.path.exists(pc):
-            raise Exception(f"Package config {pc} does not exist")
+    if args.pkgcfgs:
+        for pc in args.pkgcfgs:
+            if not os.path.exists(pc):
+                raise Exception(f"Package config {pc} does not exist")
 
     generate_build_info(args.project_file.parent, args.output_file, args.pkgcfgs)
 
@@ -547,7 +548,7 @@ BUILD_FILE_TEMPLATE = """load("@rules_semiwrap//:defs.bzl", "copy_extension_libr
 load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", {% if local_caster_targets|length > 0 %}"publish_casters", {% endif %}"resolve_casters", "run_header_gen")
 load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_caster_file", "resolve_include_root")
 {% for extension_module in extension_modules%}
-def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps = [], extension_name = None, extra_hdrs = [], extra_srcs = [], includes = [], extra_pyi_deps=[]):
+def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps = [], extension_name = None, extra_hdrs = [], extra_srcs = [], includes = [], extra_pyi_deps = []):
     {{extension_module.name|upper}}_HEADER_GEN = [
     {%- for header_cfg in extension_module.header_configs %}
         struct(
@@ -750,7 +751,7 @@ def libinit_files():
 def define_pybind_library(name, version, extra_entry_points = {}):
     native.filegroup(
         name = "{{top_level_name}}.extra_pkg_files",
-        srcs = native.glob(["{{top_level_name}}/**"], exclude = ["{{top_level_name}}/**/*.py"], allow_empty=True),
+        srcs = native.glob(["{{top_level_name}}/**"], exclude = ["{{top_level_name}}/**/*.py"], allow_empty = True),
         tags = ["manual"],
     )
 
