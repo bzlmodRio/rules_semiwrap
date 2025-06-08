@@ -37,6 +37,7 @@ def main():
 
 
 BUILD_FILE_TEMPLATE = """load("@rules_semiwrap//:defs.bzl", "create_native_library")
+load("@rules_python//python:pip.bzl", "whl_filegroup")
 
 def define_library(name, headers, headers_external_repositories, shared_library, version):
     create_native_library(
@@ -61,6 +62,20 @@ def define_library(name, headers, headers_external_repositories, shared_library,
         package_summary = "{{raw_project_config.description}}",
         strip_pkg_prefix = ["subprojects/{{raw_project_config.name}}"],
         version = version,
+    )
+
+    whl_filegroup(
+        name = "header_files",
+        pattern = "native/{{nativelib_config.pcfile[0].name}}/include",
+        whl = ":{{raw_project_config.name}}-wheel",
+    )
+
+    native.cc_library(
+        name = "{{nativelib_config.pcfile[0].name}}",
+        srcs = [shared_library],
+        hdrs = [":header_files"],
+        includes = ["header_files/native/{{nativelib_config.pcfile[0].name}}/include"],
+        visibility = ["//visibility:public"],
     )
 
 """
