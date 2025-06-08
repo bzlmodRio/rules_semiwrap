@@ -56,8 +56,10 @@ def resolve_casters(
 
     deps = []
     for dep, caster_path in caster_deps:
-        deps.append(dep)
-        cmd += " " + caster_path
+        if dep:
+            deps.append(dep)
+        if caster_path:
+            cmd += " " + caster_path
 
     for cfd in caster_files:
         if cfd.startswith(":"):
@@ -110,6 +112,7 @@ def gen_pkgconf(
         outs = [OUT_FILE],
         cmd = cmd,
         tools = _wrapper_dep() + [project_file],
+        visibility = ["//visibility:public"],
     )
 
 def header_to_dat(
@@ -230,7 +233,7 @@ def gen_modinit_hpp(
         strip_include_prefix = GEN_MODINIT_HDR_DIR,
     )
 
-def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_package, install_path, python_deps, init_packages, local_extension_deps = []):
+def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_package, install_path, python_deps, init_packages, local_extension_deps = [], target_compatible_with = None):
     outs = []
 
     init_file = init_packages[0] + "/__init__.py"
@@ -264,6 +267,7 @@ def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_p
         outs = outs,
         cmd = cmd,
         tools = [name + ".gen_wrapper"],
+        target_compatible_with = target_compatible_with
     )
 
 def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, deps = [], generation_includes = [], generation_defines = [], local_native_libraries = []):

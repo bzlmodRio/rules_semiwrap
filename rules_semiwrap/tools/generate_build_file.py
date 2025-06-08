@@ -121,16 +121,19 @@ class BazelExtensionModule:
 
             if d == "ntcore":
                 local_name = "pyntcore"
+                python_deps.add(f'local_pybind_library("//subprojects/pyntcore", "ntcore")')
             elif d == "wpihal":
                 local_name = "robotpy-hal"
+                python_deps.add(f'local_pybind_library("//subprojects/robotpy-hal", "hal")')
             elif "native" in d:
                 local_name = d
+                python_deps.add(f'"//subprojects/{local_name}:import"')
             else:
                 parts = d.split("_")
                 if self.package_path_elems[0] in parts[0]:
                     continue
                 local_name = f"robotpy-{parts[0]}"
-            python_deps.add(f"//subprojects/{local_name}:import")
+                python_deps.add(f'local_pybind_library("//subprojects/{local_name}", "{parts[0]}")')
         # raise
         self.python_deps = sorted(python_deps)
         
@@ -547,6 +550,7 @@ def main():
 BUILD_FILE_TEMPLATE = """load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library", "make_pyi", "robotpy_library")
 load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", {% if local_caster_targets|length > 0 %}"publish_casters", {% endif %}"resolve_casters", "run_header_gen")
 load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "resolve_caster_file", "resolve_include_root")
+load("//bazel_scripts:file_resolver_utils.bzl", "local_pybind_library")
 {% for extension_module in extension_modules%}
 def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps = [], extension_name = None, extra_hdrs = [], extra_srcs = [], includes = [], extra_pyi_deps = []):
     {{extension_module.name|upper}}_HEADER_GEN = [
@@ -684,9 +688,12 @@ def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps = 
         install_path = "{{extension_module.pyi_install_path}}",
         python_deps = [
         {%- for d in all_python_deps %}
-            "{{d}}",
+            {{d}},
         {%- endfor %}
         ] + extra_pyi_deps,
+        target_compatible_with = select({
+            "//conditions:default": ["@platforms//:incompatible"],
+        }),
         {%- if extension_modules|length > 1 %}
         local_extension_deps = [
         {%- for em in extension_modules %}
@@ -757,11 +764,14 @@ def define_pybind_library(name, version, extra_entry_points = {}):
 
     native.filegroup(
         name = "pyi_files",
-        srcs = [
-        {%- for em in extension_modules %}
-            ":{{em.name}}.make_pyi",
-        {%- endfor %}
-        ],
+        srcs = select({
+            "//conditions:default": [],
+            # "//conditions:default": [
+            {%- for em in extension_modules %}
+            #     ":{{em.name}}.make_pyi",
+            {%- endfor %}
+            # ],
+        }),
     )
 
     robotpy_library(
@@ -771,7 +781,7 @@ def define_pybind_library(name, version, extra_entry_points = {}):
         imports = ["."],
         robotpy_wheel_deps = [
             {%- for d in all_python_deps %}
-            "{{d}}",
+            {{d}},
             {%- endfor %}
         ],
         strip_path_prefixes = ["subprojects/{% if raw_project_config.name == "wpilib" %}robotpy-wpilib{% else %}{{raw_project_config.name}}{% endif %}"],

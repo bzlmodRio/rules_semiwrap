@@ -103,7 +103,7 @@ def robotpy_library(
 
     py_library(
         name = name,
-        visibility = None,
+        visibility = visibility,
         data = data,
         deps = robotpy_wheel_deps,
         **kwargs
@@ -174,9 +174,10 @@ def robotpy_library(
 
     native.alias(
         name = "import",
-        actual = select({
-            "@bazel_tools//src/conditions:windows": name,
-            "//conditions:default": "_import",
-        }),
+        actual = name,
+        # actual = select({
+        #     "@bazel_tools//src/conditions:windows": name,
+        #     "//conditions:default": "_import",
+        # }),
         visibility = visibility,
     )
