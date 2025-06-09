@@ -172,11 +172,9 @@ def robotpy_library(
         tags = ["manual"],
     )
 
+    # TODO
     native.alias(
         name = "import",
-        actual = select({
-            "@bazel_tools//src/conditions:windows": name,
-            "//conditions:default": "_import",
-        }),
+        actual = "_import",
         visibility = visibility,
     )
