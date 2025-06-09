@@ -20,7 +20,32 @@ def _wrapper_dep():
     return ["@rules_semiwrap//rules_semiwrap/private:wrapper"]
 
 def _local_include_root(project_import, include_subpackage):
-    return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
+    # return "$(location " + project_import + ")/site-packages/native/" + include_subpackage + "/include"
+    # TODO
+    output = "$(location " + project_import + ")"
+    output += "/native/"
+    if "wpiutil" in project_import:
+        output += "wpiutil/include"
+    elif "wpinet" in project_import:
+        output += "wpinet/include"
+    elif "wpihal" in project_import:
+        output += "wpihal/include"
+    elif "ntcore" in project_import:
+        output += "ntcore/include"
+    elif "wpimath" in project_import:
+        output += "wpimath/include"
+    elif "wpilib" in project_import:
+        output += "wpilib/include"
+    elif "xrp" in project_import:
+        output += "xrp/include"
+    elif "romi" in project_import:
+        output += "romi/include"
+    elif "apriltag" in project_import:
+        output += "apriltag/include"
+    else:
+        fail(project_import)
+    return output
+    # return ("//subprojects/robotpy-native-" + base_library_name + ":header_files", "//subprojects/robotpy-native-" + base_library_name + ":" + base_library_name)
 
 def publish_casters(
         name,
@@ -267,7 +292,7 @@ def make_pyi(name, extension_library, interface_files, init_pkgcfgs, extension_p
         outs = outs,
         cmd = cmd,
         tools = [name + ".gen_wrapper"],
-        target_compatible_with = target_compatible_with
+        target_compatible_with = target_compatible_with,
     )
 
 def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, deps = [], generation_includes = [], generation_defines = [], local_native_libraries = []):
@@ -280,7 +305,8 @@ def run_header_gen(name, casters_pickle, trampoline_subpath, header_gen_config, 
         fail()
 
     for project_label, include_subpackage in local_native_libraries:
-        header_to_dat_deps.append(project_label)
+        if project_label:
+            header_to_dat_deps.append(project_label)
         generation_includes.append(_local_include_root(project_label, include_subpackage))
 
     for header_gen in header_gen_config:

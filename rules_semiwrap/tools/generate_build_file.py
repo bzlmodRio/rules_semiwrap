@@ -54,7 +54,8 @@ class BazelExtensionModule:
         if root_package == "hal":
             root_package = "wpihal"
 
-        if "site-packages" in str(h_root):
+        # if "site-packages" in str(h_root):
+        if "site-packages" in str(h_root) or "bazel-out" in str(h_root):
             if root_package == "robotpy_apriltag":
                 root_package = "apriltag"
             if root_package == "wpilog":
@@ -93,6 +94,7 @@ class BazelExtensionModule:
 
         all_transative_deps = set()
         python_deps = set()
+        wheel_header_deps = set()
 
         for dep in dependencies:
             entry = pkgcache.get(dep)
@@ -130,12 +132,13 @@ class BazelExtensionModule:
                 python_deps.add(f'local_pybind_library("//subprojects/{local_name}", "{local_name}")')
             else:
                 parts = d.split("_")
-                if self.package_path_elems[0] in parts[0]:
-                    continue
                 local_name = f"robotpy-{parts[0]}"
-                python_deps.add(f'local_pybind_library("//subprojects/{local_name}", "{parts[0]}")')
+                if self.package_path_elems[0] not in parts[0]:
+                    python_deps.add(f'local_pybind_library("//subprojects/{local_name}", "{parts[0]}")')
+                wheel_header_deps.add(f"//subprojects/{local_name}:{d}.wheel.headers")
         # raise
         self.python_deps = sorted(python_deps)
+        self.wheel_header_deps = sorted(wheel_header_deps)
         
         # print(self.header_paths)
 
@@ -547,7 +550,9 @@ def main():
     generate_build_info(args.project_file.parent, args.output_file, args.pkgcfgs)
 
 
-BUILD_FILE_TEMPLATE = """load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library", "make_pyi", "robotpy_library")
+BUILD_FILE_TEMPLATE = """load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_python//python:pip.bzl", "whl_filegroup")
+load("@rules_semiwrap//:defs.bzl", "copy_extension_library", "create_pybind_library", "make_pyi", "robotpy_library")
 load("@rules_semiwrap//rules_semiwrap/private:semiwrap_helpers.bzl", "gen_libinit", "gen_modinit_hpp", "gen_pkgconf", {% if local_caster_targets|length > 0 %}"publish_casters", {% endif %}"resolve_casters", "run_header_gen")
 load("//bazel_scripts:file_resolver_utils.bzl", "local_native_libraries_helper", "local_pybind_library", "resolve_caster_file", "resolve_include_root")
 {% for extension_module in extension_modules%}
@@ -660,6 +665,37 @@ def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps = 
         {%- endif %}
     )
 
+    whl_filegroup(
+        name = "{{extension_module.name}}.wheel.trampoline_files",
+        pattern = "{{extension_module.package_path}}/trampolines",
+        whl = ":{{top_level_name}}-wheel",
+        visibility = ["//visibility:public"],
+        tags = ["manual"],
+    )
+
+    cc_library(
+        name = "{{extension_module.name}}.wheel.trampoline_hdrs",
+        hdrs = [":{{extension_module.name}}.wheel.trampoline_files"],
+        includes = ["{{extension_module.name}}.wheel.trampoline_files/{{extension_module.package_path}}"],
+        tags = ["manual"],
+    )
+
+    cc_library(
+        name = "{{extension_module.name}}.wheel.headers",
+        deps = [
+            ":{{extension_module.name}}.wheel.trampoline_hdrs",
+            {%- for name, caster_install_path in local_caster_targets|items %}
+            ":{{name}}.wheel.headers",
+            {%- endfor %}
+            {%- for whd in extension_module.wheel_header_deps %}
+            "{{whd}}",
+            {%- endfor %}
+            "//subprojects/robotpy-native-{{top_level_name}}:{{top_level_name}}",
+        ],
+        visibility = ["//visibility:public"],
+        tags = ["manual"],
+    )
+
     make_pyi(
         name = "{{extension_module.name}}.make_pyi",
         extension_package = "{{extension_module.parent_package}}.{{extension_module.module_name}}",
@@ -714,6 +750,29 @@ def publish_library_casters(typecasters_srcs):
         project_config = "pyproject.toml",
         typecasters_srcs = typecasters_srcs,
     )
+
+    whl_filegroup(
+        name = "{{name}}.wheel.header_files",
+        pattern = "wpiutil/src/.*.h$",
+        whl = ":wpiutil-wheel",
+        visibility = ["//visibility:public"],
+        tags = ["manual"],
+    )
+
+    cc_library(
+        name = "{{name}}.wheel.headers",
+        hdrs = [":{{name}}.wheel.header_files"],
+        includes = ["{{name}}.wheel.header_files/wpiutil/src/type_casters", "{{name}}.wheel.header_files/wpiutil/src/wpistruct"],
+        visibility = ["//visibility:public"],
+        {%- if wheel_header_deps %}
+        deps = [
+        {%- for whd in wheel_header_deps %}
+            "{{whd}}",
+        {%- endfor %}
+        ]
+        {%- endif %}
+        tags = ["manual"],
+    )
 {% endfor %}
 def get_generated_data_files():
     {%- for em in extension_modules %}
@@ -735,6 +794,7 @@ def get_generated_data_files():
             "{{caster_install_path}}/{{name}}.pybind11.json",
             {%- endfor %}
         ],
+        tags = ["manual"],
     )
 
     return [
@@ -771,6 +831,18 @@ def define_pybind_library(name, version, extra_entry_points = {}):
             {%- endfor %}
             # ],
         }),
+        tags = ["manual"],
+    )
+
+    native.filegroup(
+        name = "generated_files",
+        srcs = [
+        {%- for em in extension_modules %}
+            "{{em.name}}.generated_files",
+        {%- endfor %}
+        ],
+        tags = ["manual"],
+        visibility = ["//visibility:public"],
     )
 
     robotpy_library(

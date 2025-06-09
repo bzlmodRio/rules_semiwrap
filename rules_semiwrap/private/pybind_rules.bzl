@@ -19,7 +19,6 @@ def create_pybind_library(
     # srcs = [DAT_TO_CC_DIR + src + ".cpp" for src in dat_to_cc_srcs]
     pybind_library(
         name = "{}_pybind_library".format(name),
-        srcs = generated_srcs + extra_srcs,
         hdrs = extra_hdrs,
         copts = copts + select({
             "@bazel_tools//src/conditions:darwin": [
@@ -52,7 +51,7 @@ def create_pybind_library(
     extension_name = extension_name or "_{}".format(name)
     pybind_extension(
         name = extension_name,
-        srcs = entry_point,
+        srcs = generated_srcs + extra_srcs + entry_point,
         deps = [":{}_pybind_library".format(name)] + semiwrap_header,
         visibility = ["//visibility:private"],
         target_compatible_with = select({
@@ -60,13 +59,25 @@ def create_pybind_library(
         }),
         copts = copts + select({
             "@bazel_tools//src/conditions:darwin": [
+                "-Wno-deprecated-declarations",
+                "-Wno-overloaded-virtual",
+                "-Wno-pessimizing-move",
             ],
             "@bazel_tools//src/conditions:linux_x86_64": [
+                "-Wno-attributes",
+                "-Wno-unused-value",
+                "-Wno-deprecated",
+                "-Wno-deprecated-declarations",
                 "-Wno-unused-parameter",
+                "-Wno-redundant-move",
+                "-Wno-unused-but-set-variable",
+                "-Wno-unused-variable",
+                "-Wno-pessimizing-move",
             ],
             "@bazel_tools//src/conditions:windows": [
             ],
         }),
+        local_defines = local_defines,
     )
 
 def robotpy_library(
@@ -108,38 +119,6 @@ def robotpy_library(
         deps = robotpy_wheel_deps,
         **kwargs
     )
-
-    # print(name  )
-    # if name == "hal":
-    #     native.filegroup(
-    #         name = "ahhhhh",
-    #         srcs = [":hal/wpihal.pc".format(name)]
-    #     )
-    # elif name == "wpimath":
-    #     native.filegroup(
-    #         name = "ahhhhh",
-    #         srcs = [
-    #             ":{}/{}.pc".format(name, name),
-    #             ":wpimath/filter/wpimath_filter.pc".format(name),
-    #             ":wpimath/geometry/wpimath_geometry.pc".format(name),
-    #             ":wpimath/spline/wpimath_spline.pc".format(name),
-    #         ]
-    #     )
-    # else:
-    #     native.filegroup(
-    #         name = "ahhhhh",
-    #         srcs = [":{}/{}.pc".format(name, name)]
-    #     )
-
-    # copy_to_directory(
-    #     name = "{}.copy_headers".format(name),
-    #     srcs = [":wpiutil.trampoline_hdr_files"],
-    #     # include_external_repositories = headers_external_repositories,
-    #     out = "wpiutil/trampolines",
-    #     root_paths = ["subprojects/robotpy-wpiutil/generated/dat_to_trampoline_hdr/trampolines"],
-    #     exclude_srcs_patterns = ["**/BUILD.bazel", "WORKSPACE"],
-    #     verbose = True,
-    # )
 
     py_wheel(
         name = "{}-wheel".format(name),
