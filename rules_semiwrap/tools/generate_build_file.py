@@ -127,7 +127,7 @@ class BazelExtensionModule:
                 python_deps.add(f'local_pybind_library("//subprojects/robotpy-hal", "hal")')
             elif "native" in d:
                 local_name = d
-                python_deps.add(f'"//subprojects/{local_name}:import"')
+                python_deps.add(f'local_pybind_library("//subprojects/{local_name}", "{local_name}")')
             else:
                 parts = d.split("_")
                 if self.package_path_elems[0] in parts[0]:

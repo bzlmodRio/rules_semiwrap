@@ -10,4 +10,5 @@ def generate_native_lib_files(name, pyproject_toml, libinit_file, pc_file, pc_de
         outs = [libinit_file, pc_file],
         cmd = cmd,
         tools = ["@rules_semiwrap//rules_semiwrap/private/hatchlib_native_port:generate_native_lib_files"],
+        visibility = ["//visibility:public"],
     )
