@@ -15,6 +15,7 @@ def create_native_library(
         strip_pkg_prefix,
         version,
         deps = [],
+        local_pc_file_info = [],
         pc_dep_files = [],
         pc_dep_deps = [],
         entry_points = {},
@@ -35,6 +36,10 @@ def create_native_library(
     # if package_requires == None:
     #     fail()
 
+    if local_pc_file_info:
+        if pc_dep_files or pc_dep_deps:
+            fail()
+
     copy_to_directory(
         name = "{}.copy_headers".format(name),
         srcs = [headers],
@@ -48,10 +53,18 @@ def create_native_library(
     libinit_file = "native/{}/_init_{}.py".format(lib_name, package_name.replace("-", "_"))
     pc_file = "native/{}/{}.pc".format(lib_name, package_name)
 
+    pc_dep_files_ = list(pc_dep_files)
+    pc_dep_deps_ = list(pc_dep_deps)
+
+    for d, pcfiles in local_pc_file_info:
+        pc_dep_deps_.append(d)
+        pc_dep_files_.extend(pcfiles)
+
+
     generate_native_lib_files(
         name = "{}.generate_native_files".format(name),
-        pc_dep_files = pc_dep_files,
-        pc_dep_deps = pc_dep_deps,
+        pc_dep_files = pc_dep_files_,
+        pc_dep_deps = pc_dep_deps_,
         libinit_file = libinit_file,
         pc_file = pc_file,
         pyproject_toml = "pyproject.toml",

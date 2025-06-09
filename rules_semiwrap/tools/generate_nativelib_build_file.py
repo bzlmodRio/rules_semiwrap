@@ -39,6 +39,7 @@ def main():
 BUILD_FILE_TEMPLATE = """load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_python//python:pip.bzl", "whl_filegroup")
 load("@rules_semiwrap//:defs.bzl", "create_native_library")
+load("//bazel_scripts:file_resolver_utils.bzl", "local_pc_file_util")
 
 def define_library(name, headers, headers_external_repositories, shared_library, version):
     create_native_library(
@@ -49,16 +50,10 @@ def define_library(name, headers, headers_external_repositories, shared_library,
         headers_external_repositories = headers_external_repositories,
         shared_library = shared_library,
         lib_name = "{{nativelib_config.pcfile[0].name}}",
-        pc_dep_deps = [
+        local_pc_file_info ={% if nativelib_config.pcfile[0].requires | length == 0 %} [],{% else %}
         {%- for dep in nativelib_config.pcfile[0].requires | sort %}
-            "//subprojects/{{dep}}:import",
-        {%- endfor %}
-        ],
-        pc_dep_files = [
-        {%- for dep in nativelib_config.pcfile[0].requires | sort %}
-            "$(location //subprojects/{{dep}}:import)/site-packages/native/{{dep | get_subpath}}/{{dep}}.pc",
-        {%- endfor %}
-        ],
+            local_pc_file_util("//subprojects/{{dep}}", ["native/{{dep | get_subpath}}/{{dep}}.pc"]){% if not loop.last %} +{% endif %}
+        {%- endfor %},{% endif %}
         package_requires = {{raw_project_config.dependencies|double_quotes}},
         package_summary = "{{raw_project_config.description}}",
         strip_pkg_prefix = ["subprojects/{{raw_project_config.name}}"],
