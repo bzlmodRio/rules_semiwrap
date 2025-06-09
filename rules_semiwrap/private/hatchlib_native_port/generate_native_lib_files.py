@@ -26,12 +26,8 @@ class NativelibHook:
         self.output_pcfile = output_pcfile
         self.output_libinit = output_libinit
 
-        print(output_pcfile)
-        # raise
-
         self.config = config
         self.root_pth = output_pcfile.parent.parent.parent
-        print(self.root_pth)
 
     def initialize(self):
         for pcfg in self._pcfiles:
@@ -39,11 +35,10 @@ class NativelibHook:
 
     def _get_pkg_from_path(self, path: pathlib.Path) -> str:
         rel = path.relative_to(self.root_pth)
-        print(rel)
         # raise
         # # TODO: this seems right? is it?
         # dist_pth = self.build_config.get_distribution_path(str(rel))
-        return str(rel).replace("/", ".")
+        return str(rel).replace("/", ".").replace("\\\\", ".")
 
     def _generate_pcfile(
         self, pcfg: PcFileConfig, build_data: T.Dict[str, T.Any]
@@ -147,7 +142,6 @@ class NativelibHook:
         with open(pcfile, "w") as fp:
             fp.write(content)
 
-        # build_data["artifacts"].append(pcfile_rel.as_posix())
         return pcfile
 
     def _generate_init_py(
@@ -161,15 +155,13 @@ class NativelibHook:
 
         libdir = prefix_path
         if pcfg.libdir:
-            print("*******", pcfg.libdir)
             libdir = self.root_pth / pathlib.PurePosixPath(pcfg.libdir)
-            libdir = pathlib.Path(str(libdir).replace("src/", ""))
+            libdir = pathlib.Path(str(libdir).replace("src/", "").replace("src\\", ""))
 
         lib_paths = []
         assert pcfg.shared_libraries is not None
         for lib in pcfg.shared_libraries:
             lib_path = libdir / self._make_shared_lib_fname(lib)
-            print(lib_path)
             # raise
             # if not lib_path.exists():
             #     raise FileNotFoundError(f"shared library not found: {lib_path}")
@@ -307,7 +299,6 @@ def _write_libinit_py(
         contents += ["", "__lib = __load_library()", ""]
 
     content = ("\n".join(contents)) + "\n"
-    # maybe_write_file(init_py, content)
 
     init_py.parent.mkdir(parents=True, exist_ok=True)
     with open(init_py, "w") as fp:
@@ -327,31 +318,20 @@ def hack_pkgconfig(pkgcfgs):
 
 
 def main():
-    print(sys.argv)
-
     pyproject_toml = sys.argv[1]
     libinit_file = pathlib.Path(sys.argv[2])
     pc_file = pathlib.Path(sys.argv[3])
     pkgcfgs = [pathlib.Path(x) for x in sys.argv[4:]]
-    print(pkgcfgs)
 
     hack_pkgconfig(pkgcfgs)
     
     with open(pyproject_toml, 'rb') as fp:
         raw_config = tomli.load(fp)
-    # print(raw_config)
 
     nativelib_cfg = raw_config["tool"]["hatch"]["build"]["hooks"]["nativelib"]
-    # pc_files = _get_pc_files(nativelib_cfg)
-    # print(pc_files)
 
     generator = NativelibHook(pc_file, libinit_file, nativelib_cfg)
     generator.initialize()
-    
-    # for pcfg in pc_files:
-    #     pcfile = _generate_pcfile()
-
-
 
 
 if __name__ == "__main__":
