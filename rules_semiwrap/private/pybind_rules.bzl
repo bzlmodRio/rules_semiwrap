@@ -156,4 +156,5 @@ def robotpy_library(
         name = "import",
         actual = "_import",
         visibility = visibility,
+        tags = ["manual"],
     )

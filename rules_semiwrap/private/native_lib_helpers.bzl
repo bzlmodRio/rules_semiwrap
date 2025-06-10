@@ -123,4 +123,5 @@ def create_native_library(
         name = "import",
         wheel = "{}-wheel".format(package_name),
         visibility = visibility,
+        tags = ["manual"],
     )

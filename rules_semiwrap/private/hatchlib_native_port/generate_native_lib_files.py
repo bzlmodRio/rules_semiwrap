@@ -38,7 +38,7 @@ class NativelibHook:
         # raise
         # # TODO: this seems right? is it?
         # dist_pth = self.build_config.get_distribution_path(str(rel))
-        return str(rel).replace("/", ".").replace("\\\\", ".")
+        return str(rel).replace("/", ".").replace("\\", ".")
 
     def _generate_pcfile(
         self, pcfg: PcFileConfig, build_data: T.Dict[str, T.Any]
