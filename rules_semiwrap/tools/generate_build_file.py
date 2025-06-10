@@ -129,7 +129,9 @@ class BazelExtensionModule:
                 python_deps.add(f'local_pybind_library("//subprojects/robotpy-hal", "hal")')
             elif "native" in d:
                 local_name = d
+                base_lib = re.search("robotpy-native-(.*)", d)[1]
                 python_deps.add(f'local_pybind_library("//subprojects/{local_name}", "{local_name}")')
+                wheel_header_deps.add(f"//subprojects/{d}:{base_lib}")
             else:
                 parts = d.split("_")
                 local_name = f"robotpy-{parts[0]}"
@@ -204,9 +206,25 @@ class _BuildPlanner:
             if data:
                 return json.dumps(data)
             return None
+
+        def get_caster_pattern(name):
+            entry = self.pkgcache.get(name)
+            common_prefix = os.path.commonprefix(entry.include_path)
+            rel = pathlib.Path(common_prefix).relative_to(self.pyproject.package_root)
+            return f"{rel}/.*.h$"
+
+        def get_caster_includes(name):
+            entry = self.pkgcache.get(name)
+            includes = []
+            for ip in entry.include_path:
+                rel = ip.relative_to(self.pyproject.package_root)
+                includes.append(f"{name}.wheel.header_files/{rel}")
+            return json.dumps(includes)
         
         env = Environment(loader=BaseLoader)
         env.filters['double_quotes'] = double_quotes
+        env.filters['get_caster_pattern'] = get_caster_pattern
+        env.filters['get_caster_includes'] = get_caster_includes
         template = env.from_string(BUILD_FILE_TEMPLATE)
 
         all_python_deps = set()
@@ -690,7 +708,6 @@ def {{extension_module.name}}_extension(entry_point, deps, header_to_dat_deps = 
             {%- for whd in extension_module.wheel_header_deps %}
             "{{whd}}",
             {%- endfor %}
-            "//subprojects/robotpy-native-{{top_level_name}}:{{top_level_name}}",
         ],
         visibility = ["//visibility:public"],
         tags = ["manual"],
@@ -753,8 +770,8 @@ def publish_library_casters(typecasters_srcs):
 
     whl_filegroup(
         name = "{{name}}.wheel.header_files",
-        pattern = "wpiutil/src/.*.h$",
-        whl = ":wpiutil-wheel",
+        pattern = "{{name | get_caster_pattern}}",
+        whl = ":{{top_level_name}}-wheel",
         visibility = ["//visibility:public"],
         tags = ["manual"],
     )
@@ -762,7 +779,7 @@ def publish_library_casters(typecasters_srcs):
     cc_library(
         name = "{{name}}.wheel.headers",
         hdrs = [":{{name}}.wheel.header_files"],
-        includes = ["{{name}}.wheel.header_files/wpiutil/src/type_casters", "{{name}}.wheel.header_files/wpiutil/src/wpistruct"],
+        includes = {{name | get_caster_includes}},
         visibility = ["//visibility:public"],
         {%- if wheel_header_deps %}
         deps = [
